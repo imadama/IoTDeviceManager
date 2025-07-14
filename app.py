@@ -1,18 +1,49 @@
 import os
 import logging
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
 from device_manager import DeviceManager
 from database import Database
-from models import DeviceStatus
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+class Base(DeclarativeBase):
+    pass
+
+db_sqlalchemy = SQLAlchemy(model_class=Base)
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 
+# Configure PostgreSQL database
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 300,
+        "pool_pre_ping": True,
+    }
+    # Initialize SQLAlchemy
+    db_sqlalchemy.init_app(app)
+    
+    # Create tables
+    with app.app_context():
+        import models_postgres  # Import models to register them
+        db_sqlalchemy.create_all()
+else:
+    logging.warning("DATABASE_URL not found, continuing with SQLite")
+
 # Initialize components
-db = Database()
+if database_url:
+    from database_postgres import PostgresDatabase
+    db = PostgresDatabase()
+    logging.info("Using PostgreSQL database")
+else:
+    db = Database()  # Fallback to SQLite
+    logging.info("Using SQLite database")
+
 device_manager = DeviceManager(db)
 
 @app.route('/')

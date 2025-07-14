@@ -23,9 +23,12 @@ Preferred communication style: Simple, everyday language.
 - **Icons**: Font Awesome for UI elements
 
 ### Data Storage Solutions
-- **Primary Database**: SQLite database (`iot_devices.db`) with measurements table
+- **Primary Database**: PostgreSQL database with proper tables and indexing
+  - `device_measurements`: Stores all IoT device measurement data with timestamps
+  - `device_configs`: Stores device configuration and status information
+- **Fallback Database**: SQLite database (`iot_devices.db`) when PostgreSQL unavailable
 - **State Persistence**: JSON file (`device_status.json`) for device configuration and counters
-- **Schema Design**: Simple measurement table with device_id, timestamp, voltage, current, power, and kwh fields
+- **Schema Design**: Normalized PostgreSQL schema with proper data types and relationships
 
 ## Key Components
 
@@ -57,7 +60,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Python Packages
 - **Flask**: Web framework for HTTP handling and template rendering
-- **sqlite3**: Database operations (built-in Python module)
+- **Flask-SQLAlchemy**: ORM for database operations with PostgreSQL
+- **psycopg2-binary**: PostgreSQL adapter for Python
+- **sqlite3**: Database operations (built-in Python module) - fallback only
 - **multiprocessing**: Process management for device simulation
 - **logging**: Application logging and debugging
 

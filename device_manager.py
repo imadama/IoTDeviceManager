@@ -108,6 +108,10 @@ class DeviceManager:
         status = DeviceStatus(device_id, device_type)
         self.device_statuses[device_id] = status
         
+        # Save to PostgreSQL if available
+        if hasattr(self.db, 'save_device_config'):
+            self.db.save_device_config(device_id, device_type, 'stopped')
+        
         self._save_device_status()
         self.logger.info(f"Added new device: {device_id} ({device_type})")
         
@@ -125,6 +129,11 @@ class DeviceManager:
             process.start()
             
             self.devices[device_id] = process
+            
+            # Update status in PostgreSQL if available
+            if hasattr(self.db, 'save_device_config'):
+                self.db.save_device_config(device_id, device_type, 'active')
+            
             self._save_device_status()
             
             self.logger.info(f"Started device {device_id}")
@@ -150,6 +159,12 @@ class DeviceManager:
                     process.kill()  # Force kill if still alive
                     
             del self.devices[device_id]
+            
+            # Update status in PostgreSQL if available
+            if hasattr(self.db, 'save_device_config'):
+                device_type = self._get_device_type_from_id(device_id)
+                self.db.save_device_config(device_id, device_type, 'stopped')
+            
             self._save_device_status()
             
             self.logger.info(f"Stopped device {device_id}")
@@ -166,7 +181,19 @@ class DeviceManager:
             if device_id in self.devices:
                 self.stop_device(device_id)
                 
-            # Remove from status file
+            # Remove from device_statuses
+            if device_id in self.device_statuses:
+                del self.device_statuses[device_id]
+                
+            # Delete measurements from database
+            if hasattr(self.db, 'delete_device_measurements'):
+                self.db.delete_device_measurements(device_id)
+                
+            # Delete device config if using PostgreSQL
+            if hasattr(self.db, 'delete_device_config'):
+                self.db.delete_device_config(device_id)
+                
+            # Save updated status file
             self._save_device_status()
             
             self.logger.info(f"Deleted device {device_id}")
