@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Data View - IoT Device Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Filter Controls -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-filter me-2"></i>Data Filters
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('data_view') }}">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="device_id" class="form-label">Device Filter</label>
+                            <select class="form-select" id="device_id" name="device_id">
+                                <option value="">All Devices</option>
+                                {% for device in devices %}
+                                    <option value="{{ device.device_id }}" 
+                                            {% if device.device_id == selected_device %}selected{% endif %}>
+                                        {{ device.device_id }} ({{ device.device_type }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search me-1"></i>Filter
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <a href="{{ url_for('data_view') }}" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Showing latest 100 measurements
+                                {% if selected_device %}for device {{ selected_device }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Measurement Data -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Measurement Data
+                    {% if selected_device %}
+                        <span class="badge bg-primary ms-2">{{ selected_device }}</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if measurements %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Device ID</th>
+                                    <th>Voltage (V)</th>
+                                    <th>Current (A)</th>
+                                    <th>Power (W)</th>
+                                    <th>Energy (kWh)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for measurement in measurements %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ measurement.timestamp|replace('T', ' ')|replace('Z', '') }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <code class="text-primary">{{ measurement.device_id }}</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            {{ "%.2f"|format(measurement.voltage) }} V
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ "%.2f"|format(measurement.current) }} A
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            {{ "%.0f"|format(measurement.power) }} W
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            {{ "%.3f"|format(measurement.kwh) }} kWh
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Summary Statistics -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card bg-body-secondary">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-calculator me-2"></i>Summary Statistics
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-md-3">
+                                            <div class="border-end">
+                                                <h6 class="text-muted">Total Records</h6>
+                                                <h4 class="text-primary">{{ measurements|length }}</h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="border-end">
+                                                <h6 class="text-muted">Avg Power</h6>
+                                                <h4 class="text-success">
+                                                    {{ "%.0f"|format((measurements|sum(attribute='power') / measurements|length) if measurements else 0) }} W
+                                                </h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="border-end">
+                                                <h6 class="text-muted">Total Energy</h6>
+                                                <h4 class="text-warning">
+                                                    {{ "%.2f"|format(measurements|sum(attribute='kwh') if measurements else 0) }} kWh
+                                                </h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <h6 class="text-muted">Latest Update</h6>
+                                            <h4 class="text-info">
+                                                {% if measurements %}
+                                                    Recent
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No measurement data available</h5>
+                        {% if selected_device %}
+                            <p class="text-muted">
+                                No data found for device <code>{{ selected_device }}</code>. 
+                                Make sure the device is running and generating data.
+                            </p>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                            </a>
+                        {% else %}
+                            <p class="text-muted">
+                                Start some devices from the dashboard to begin collecting measurement data.
+                            </p>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                                <i class="fas fa-tachometer-alt me-1"></i>Go to Dashboard
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Auto-refresh notification -->
+{% if measurements %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Auto-refresh:</strong> This page will automatically refresh every 30 seconds to show the latest data.
+            <button type="button" class="btn btn-sm btn-outline-info ms-2" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh Now
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh page every 30 seconds
+setTimeout(function() {
+    location.reload();
+}, 30000);
+
+// Add moment.js for date formatting (if needed)
+function moment(dateString) {
+    const date = new Date(dateString);
+    return {
+        format: function(format) {
+            // Simple date formatting - in production use moment.js library
+            if (format === 'DD/MM/YYYY HH:mm:ss') {
+                return date.toLocaleString('nl-NL');
+            }
+            return date.toLocaleString();
+        },
+        fromNow: function() {
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if (diff < 60) return diff + ' seconds ago';
+            if (diff < 3600) return Math.floor(diff / 60) + ' minutes ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' hours ago';
+            return Math.floor(diff / 86400) + ' days ago';
+        }
+    };
+}
+</script>
+{% endblock %}

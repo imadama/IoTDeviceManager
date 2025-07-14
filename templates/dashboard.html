@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - IoT Device Management{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Device Statistics -->
+    <div class="col-12 mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-microchip fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">Total Devices</h5>
+                        <h2 class="text-primary">{{ devices|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-play-circle fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">Active Devices</h5>
+                        <h2 class="text-success">{{ devices|selectattr('status', 'equalto', 'active')|list|length }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-stop-circle fa-2x text-secondary mb-2"></i>
+                        <h5 class="card-title">Stopped Devices</h5>
+                        <h2 class="text-secondary">{{ devices|selectattr('status', 'equalto', 'stopped')|list|length }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Device -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Device
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_device') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="device_type" class="form-label">Device Type</label>
+                        <select class="form-select" id="device_type" name="device_type" required>
+                            <option value="">Select device type...</option>
+                            {% for device_type in device_types %}
+                                <option value="{{ device_type }}">{{ device_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus me-1"></i>Add Device
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device List -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Device Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if devices %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Device ID</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in devices %}
+                                <tr>
+                                    <td>
+                                        <code>{{ device.device_id }}</code>
+                                    </td>
+                                    <td>
+                                        {% if device.device_type == 'PV' %}
+                                            <i class="fas fa-solar-panel text-warning me-1"></i>
+                                        {% elif device.device_type == 'Heat Pump' %}
+                                            <i class="fas fa-thermometer-half text-info me-1"></i>
+                                        {% elif device.device_type == 'Main Grid' %}
+                                            <i class="fas fa-bolt text-primary me-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-microchip text-secondary me-1"></i>
+                                        {% endif %}
+                                        {{ device.device_type }}
+                                    </td>
+                                    <td>
+                                        {% if device.status == 'active' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-play me-1"></i>Actief
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-stop me-1"></i>Gestopt
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            {% if device.status == 'active' %}
+                                                <a href="{{ url_for('stop_device', device_id=device.device_id) }}" 
+                                                   class="btn btn-outline-secondary"
+                                                   onclick="return confirm('Are you sure you want to stop {{ device.device_id }}?')">
+                                                    <i class="fas fa-stop me-1"></i>Stop
+                                                </a>
+                                            {% else %}
+                                                <a href="{{ url_for('start_device', device_id=device.device_id) }}" 
+                                                   class="btn btn-outline-success">
+                                                    <i class="fas fa-play me-1"></i>Start
+                                                </a>
+                                            {% endif %}
+                                            <a href="{{ url_for('data_view', device_id=device.device_id) }}" 
+                                               class="btn btn-outline-primary">
+                                                <i class="fas fa-chart-line me-1"></i>Data
+                                            </a>
+                                            <a href="{{ url_for('delete_device', device_id=device.device_id) }}" 
+                                               class="btn btn-outline-danger"
+                                               onclick="return confirm('Are you sure you want to delete {{ device.device_id }}? This will also delete all measurement data.')">
+                                                <i class="fas fa-trash me-1"></i>Delete
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No devices added yet</h5>
+                        <p class="text-muted">Add your first IoT device using the form on the left.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Status Updates -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>System Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <small class="text-muted">Last Update</small>
+                        <div id="last-update" class="fw-bold">--:--:--</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">System Status</small>
+                        <div class="text-success fw-bold">
+                            <i class="fas fa-circle me-1"></i>Online
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Data Generation</small>
+                        <div class="text-info fw-bold">
+                            <i class="fas fa-sync-alt me-1"></i>Every 5s
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Auto Refresh</small>
+                        <div class="text-warning fw-bold">
+                            <i class="fas fa-refresh me-1"></i>30s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
