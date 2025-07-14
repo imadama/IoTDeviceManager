@@ -11,6 +11,7 @@ class DeviceManager:
     def __init__(self, database):
         self.db = database
         self.devices = {}  # device_id -> Process object
+        self.device_statuses = {}  # device_id -> DeviceStatus object
         self.status_file = 'device_status.json'
         self.device_counters = {
             'PV': 0,
@@ -36,6 +37,15 @@ class DeviceManager:
                         if status_data['status'] == 'active':
                             # Mark as stopped since processes don't persist across app restarts
                             status_data['status'] = 'stopped'
+                        
+                        # Create DeviceStatus object and store it
+                        device_status = DeviceStatus(
+                            device_id=device_id,
+                            device_type=status_data['device_type'],
+                            status=status_data['status'],
+                            created_at=status_data.get('created_at')
+                        )
+                        self.device_statuses[device_id] = device_status
                             
                 self.logger.info(f"Loaded device status from {self.status_file}")
             except Exception as e:
@@ -45,12 +55,13 @@ class DeviceManager:
         """Save device status to JSON file"""
         try:
             devices_status = {}
-            for device_id in self.get_all_device_ids():
-                status = self.get_device_status(device_id)
+            
+            # Save all devices from device_statuses
+            for device_id, device_status in self.device_statuses.items():
                 devices_status[device_id] = {
-                    'device_type': self._get_device_type_from_id(device_id),
-                    'status': status.status,
-                    'created_at': status.created_at
+                    'device_type': device_status.device_type,
+                    'status': device_status.status,
+                    'created_at': device_status.created_at
                 }
             
             data = {
@@ -93,8 +104,9 @@ class DeviceManager:
         """Add a new device"""
         device_id = self._generate_device_id(device_type)
         
-        # Create device status entry
+        # Create device status entry and store it
         status = DeviceStatus(device_id, device_type)
+        self.device_statuses[device_id] = status
         
         self._save_device_status()
         self.logger.info(f"Added new device: {device_id} ({device_type})")
@@ -167,13 +179,21 @@ class DeviceManager:
     def get_device_status(self, device_id):
         """Get the status of a specific device"""
         is_active = device_id in self.devices and self.devices[device_id].is_alive()
-        device_type = self._get_device_type_from_id(device_id)
         
-        return DeviceStatus(
-            device_id=device_id,
-            device_type=device_type,
-            status='active' if is_active else 'stopped'
-        )
+        # Get device status from stored statuses, or create new one
+        if device_id in self.device_statuses:
+            device_status = self.device_statuses[device_id]
+            # Update status based on actual process state
+            device_status.status = 'active' if is_active else 'stopped'
+            return device_status
+        else:
+            # Fallback: create new status
+            device_type = self._get_device_type_from_id(device_id)
+            return DeviceStatus(
+                device_id=device_id,
+                device_type=device_type,
+                status='active' if is_active else 'stopped'
+            )
         
     def get_all_device_ids(self):
         """Get all device IDs from the status file"""
@@ -182,7 +202,10 @@ class DeviceManager:
         # Get from active processes
         device_ids.update(self.devices.keys())
         
-        # Get from status file
+        # Get from stored device statuses
+        device_ids.update(self.device_statuses.keys())
+        
+        # Get from status file as backup
         if os.path.exists(self.status_file):
             try:
                 with open(self.status_file, 'r') as f:
