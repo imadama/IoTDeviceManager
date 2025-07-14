@@ -147,31 +147,61 @@ class DeviceManager:
         """Stop a device process"""
         if device_id not in self.devices:
             self.logger.warning(f"Device {device_id} not found in active devices")
+            # Still try to update database status even if process not found
+            if hasattr(self.db, 'save_device_config'):
+                device_type = self._get_device_type_from_id(device_id)
+                self.db.save_device_config(device_id, device_type, 'stopped')
             return False
             
         try:
             process = self.devices[device_id]
+            self.logger.info(f"Attempting to stop device {device_id} (PID: {process.pid if process.is_alive() else 'N/A'})")
+            
             if process.is_alive():
+                # First try graceful termination
                 process.terminate()
-                process.join(timeout=5)  # Wait up to 5 seconds for graceful shutdown
+                self.logger.debug(f"Sent SIGTERM to device {device_id}")
                 
+                # Wait for graceful shutdown
+                process.join(timeout=3)
+                
+                # If still alive, force kill
                 if process.is_alive():
-                    process.kill()  # Force kill if still alive
+                    self.logger.warning(f"Device {device_id} didn't respond to SIGTERM, sending SIGKILL")
+                    process.kill()
+                    process.join(timeout=2)
                     
+                # Final check
+                if process.is_alive():
+                    self.logger.error(f"Failed to kill device {device_id} process")
+                else:
+                    self.logger.info(f"Device {device_id} process terminated")
+            else:
+                self.logger.info(f"Device {device_id} process was already terminated")
+                    
+            # Remove from active devices
             del self.devices[device_id]
             
             # Update status in PostgreSQL if available
             if hasattr(self.db, 'save_device_config'):
                 device_type = self._get_device_type_from_id(device_id)
                 self.db.save_device_config(device_id, device_type, 'stopped')
+                self.logger.debug(f"Updated database status for {device_id} to stopped")
             
             self._save_device_status()
             
-            self.logger.info(f"Stopped device {device_id}")
+            self.logger.info(f"Successfully stopped device {device_id}")
             return True
             
         except Exception as e:
             self.logger.error(f"Error stopping device {device_id}: {e}")
+            # Try to remove from devices list anyway
+            if device_id in self.devices:
+                del self.devices[device_id]
+            # Still update database status
+            if hasattr(self.db, 'save_device_config'):
+                device_type = self._get_device_type_from_id(device_id)
+                self.db.save_device_config(device_id, device_type, 'stopped')
             return False
             
     def delete_device(self, device_id):
