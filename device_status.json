@@ -1,8 +1,19 @@
 {
   "counters": {
-    "PV": 1,
+    "PV": 3,
     "Heat Pump": 1,
     "Main Grid": 1
   },
-  "devices": {}
+  "devices": {
+    "pv002": {
+      "device_type": "PV",
+      "status": "stopped",
+      "created_at": "2025-07-14T12:57:14.264479"
+    },
+    "pv003": {
+      "device_type": "PV",
+      "status": "stopped",
+      "created_at": "2025-07-14T12:57:49.749635"
+    }
+  }
 }

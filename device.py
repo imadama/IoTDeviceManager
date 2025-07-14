@@ -58,11 +58,41 @@ class VirtualDevice:
 
 def device_worker(device_id, device_type):
     """Worker function that runs in a separate process for each device"""
+    import os
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(f'Device-{device_id}')
     
     # Create database connection for this process
-    db = Database()
+    # Check if PostgreSQL is available, otherwise use SQLite
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        # Import Flask app context for PostgreSQL
+        from flask import Flask
+        from flask_sqlalchemy import SQLAlchemy
+        from sqlalchemy.orm import DeclarativeBase
+        from database_postgres import PostgresDatabase
+        
+        # Create minimal Flask app for database context
+        class Base(DeclarativeBase):
+            pass
+        
+        db_sqlalchemy = SQLAlchemy(model_class=Base)
+        worker_app = Flask(__name__)
+        worker_app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+        worker_app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "pool_recycle": 300,
+            "pool_pre_ping": True,
+        }
+        db_sqlalchemy.init_app(worker_app)
+        
+        with worker_app.app_context():
+            import models_postgres  # Import models
+            db = PostgresDatabase()
+            logger.info(f"Device worker {device_id} using PostgreSQL")
+    else:
+        db = Database()
+        logger.info(f"Device worker {device_id} using SQLite")
+        
     device = VirtualDevice(device_id, device_type)
     
     logger.info(f"Starting device worker for {device_id} ({device_type})")
