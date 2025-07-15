@@ -58,6 +58,10 @@ def dashboard():
     from device_settings import device_settings
     current_interval = device_settings.get_measurement_interval()
     
+    # Get MQTT settings
+    from mqtt_client import mqtt_settings
+    mqtt_config = mqtt_settings.settings
+    
     # Create device type info mapping for template
     device_type_info_map = {}
     for type_name in device_types:
@@ -71,7 +75,14 @@ def dashboard():
                          devices=devices, 
                          device_types=device_types,
                          device_type_info_map=device_type_info_map,
-                         current_interval=current_interval)
+                         current_interval=current_interval,
+                         mqtt_enabled=mqtt_config.get('enabled', False),
+                         mqtt_broker_host=mqtt_config.get('broker_host', ''),
+                         mqtt_broker_port=mqtt_config.get('broker_port', 1883),
+                         mqtt_username=mqtt_config.get('username', ''),
+                         mqtt_password=mqtt_config.get('password', ''),
+                         mqtt_tenant=mqtt_config.get('tenant', ''),
+                         mqtt_use_ssl=mqtt_config.get('use_ssl', False))
 
 @app.route('/add_device', methods=['POST'])
 def add_device():
@@ -181,6 +192,53 @@ def update_settings():
     except Exception as e:
         flash(f'Error updating settings: {str(e)}', 'error')
         logging.error(f"Error updating settings: {e}")
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/update_mqtt_settings', methods=['POST'])
+def update_mqtt_settings():
+    """Update MQTT settings"""
+    try:
+        from mqtt_client import mqtt_settings
+        
+        # Get form data
+        enabled = 'mqtt_enabled' in request.form
+        broker_host = request.form.get('broker_host', '').strip()
+        broker_port = int(request.form.get('broker_port', 1883))
+        username = request.form.get('mqtt_username', '').strip()
+        password = request.form.get('mqtt_password', '').strip()
+        tenant = request.form.get('mqtt_tenant', '').strip()
+        use_ssl = 'use_ssl' in request.form
+        
+        # Validate port
+        if broker_port < 1 or broker_port > 65535:
+            broker_port = 8883 if use_ssl else 1883
+        
+        # Update settings
+        mqtt_settings.update_settings(
+            enabled=enabled,
+            broker_host=broker_host,
+            broker_port=broker_port,
+            username=username,
+            password=password,
+            tenant=tenant,
+            use_ssl=use_ssl
+        )
+        
+        if enabled and broker_host:
+            flash(f'MQTT settings updated - connected to {broker_host}', 'success')
+        elif enabled:
+            flash('MQTT enabled but broker host is required', 'warning')
+        else:
+            flash('MQTT disabled', 'info')
+            
+        logging.info(f"MQTT settings updated: enabled={enabled}, host={broker_host}")
+        
+    except ValueError as e:
+        flash(f'Invalid port number: {str(e)}', 'error')
+    except Exception as e:
+        flash(f'Error updating MQTT settings: {str(e)}', 'error')
+        logging.error(f"Error updating MQTT settings: {e}")
     
     return redirect(url_for('dashboard'))
 

@@ -85,6 +85,38 @@ def device_worker(device_id, device_type, interval_seconds=None):
     else:
         db = Database()
         logger.info(f"Device worker {device_id} using SQLite")
+    
+    # Initialize MQTT client if enabled
+    mqtt_client = None
+    try:
+        from mqtt_client import CumulocityMqttClient, mqtt_settings
+        if mqtt_settings.is_enabled():
+            connection_params = mqtt_settings.get_connection_params()
+            if connection_params['broker_host']:
+                mqtt_client = CumulocityMqttClient(
+                    broker_host=connection_params['broker_host'],
+                    broker_port=connection_params['broker_port'],
+                    username=connection_params['username'],
+                    password=connection_params['password'],
+                    tenant=connection_params['tenant'],
+                    device_id=device_id
+                )
+                
+                if mqtt_client.connect():
+                    logger.info(f"MQTT enabled for {device_id}")
+                    # Register device with Cumulocity
+                    device_name = f"{mqtt_settings.settings.get('device_prefix', 'iot_sim_')}{device_id}"
+                    mqtt_client.register_device(device_type, device_name)
+                else:
+                    logger.warning(f"Failed to connect to MQTT broker for {device_id}")
+                    mqtt_client = None
+            else:
+                logger.info(f"MQTT enabled but no broker host configured for {device_id}")
+        else:
+            logger.info(f"MQTT disabled for {device_id}")
+    except Exception as e:
+        logger.error(f"Error initializing MQTT for {device_id}: {e}")
+        mqtt_client = None
         
     device = VirtualDevice(device_id, device_type)
     device.interval_seconds = interval_seconds  # Store for kWh calculation
@@ -106,6 +138,10 @@ def device_worker(device_id, device_type, interval_seconds=None):
                 kwh=data['kwh']
             )
             
+            # Send to MQTT if enabled and connected
+            if mqtt_client and mqtt_client.connected:
+                mqtt_client.send_measurement(data)
+            
             logger.debug(f"Generated data for {device_id}: {data}")
             
             # Wait for configured interval before next measurement
@@ -116,4 +152,7 @@ def device_worker(device_id, device_type, interval_seconds=None):
     except Exception as e:
         logger.error(f"Error in device worker {device_id}: {e}")
     finally:
+        # Clean up MQTT connection
+        if mqtt_client:
+            mqtt_client.disconnect()
         logger.info(f"Device worker {device_id} shutting down")

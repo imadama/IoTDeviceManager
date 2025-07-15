@@ -16,6 +16,7 @@ Preferred communication style: Simple, everyday language.
 - **Process Management**: Python multiprocessing for running virtual device simulations
 - **Data Models**: Simple Python classes for DeviceStatus and Measurement entities
 - **Device Type Abstraction**: Abstract Base Class pattern for extensible device types with DeviceTypeInterface
+- **MQTT Integration**: Cumulocity IoT platform connectivity using paho-mqtt library
 
 ### Frontend Architecture
 - **Template Engine**: Jinja2 templates with Flask
@@ -30,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Fallback Database**: SQLite database (`iot_devices.db`) when PostgreSQL unavailable
 - **State Persistence**: JSON file (`device_status.json`) for device configuration and counters
 - **Schema Design**: Normalized PostgreSQL schema with proper data types and relationships
+- **Settings Storage**: JSON files for device and MQTT configuration persistence
 
 ## Key Components
 

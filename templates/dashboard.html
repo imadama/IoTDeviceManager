@@ -101,6 +101,90 @@
                 </div>
             </div>
         </div>
+        
+        <!-- MQTT Settings -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-wifi me-2"></i>MQTT Configuration
+                    {% if mqtt_enabled %}
+                        <span class="badge bg-success ms-2">Enabled</span>
+                    {% else %}
+                        <span class="badge bg-secondary ms-2">Disabled</span>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_mqtt_settings') }}" method="POST">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="mqtt_enabled" 
+                               name="mqtt_enabled" {{ 'checked' if mqtt_enabled else '' }}>
+                        <label class="form-check-label" for="mqtt_enabled">
+                            Enable MQTT (Cumulocity)
+                        </label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="broker_host" class="form-label">Broker Host</label>
+                        <input type="text" class="form-control" id="broker_host" 
+                               name="broker_host" value="{{ mqtt_broker_host }}" 
+                               placeholder="your-tenant.cumulocity.com">
+                        <div class="form-text">Cumulocity tenant URL</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="mqtt_username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="mqtt_username" 
+                                   name="mqtt_username" value="{{ mqtt_username }}" 
+                                   placeholder="tenant/username">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="mqtt_password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="mqtt_password" 
+                                   name="mqtt_password" value="{{ mqtt_password }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="mqtt_tenant" class="form-label">Tenant ID</label>
+                            <input type="text" class="form-control" id="mqtt_tenant" 
+                                   name="mqtt_tenant" value="{{ mqtt_tenant }}" 
+                                   placeholder="your-tenant">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="broker_port" class="form-label">Port</label>
+                            <input type="number" class="form-control" id="broker_port" 
+                                   name="broker_port" value="{{ mqtt_broker_port }}" 
+                                   placeholder="1883">
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="use_ssl" 
+                               name="use_ssl" {{ 'checked' if mqtt_use_ssl else '' }}>
+                        <label class="form-check-label" for="use_ssl">
+                            Use SSL/TLS (Port 8883)
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-save me-1"></i>Update MQTT Settings
+                    </button>
+                </form>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <strong>Cumulocity Setup:</strong><br>
+                        1. Create device bootstrap credentials in Device Management<br>
+                        2. Use format: tenant/username for username field<br>
+                        3. Devices will auto-register when started<br>
+                        4. Changes apply to newly started devices
+                    </small>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Device List -->
@@ -142,6 +226,11 @@
                                         {% else %}
                                             <span class="badge bg-secondary">
                                                 <i class="fas fa-stop me-1"></i>Gestopt
+                                            </span>
+                                        {% endif %}
+                                        {% if mqtt_enabled %}
+                                            <span class="badge bg-info ms-1">
+                                                <i class="fas fa-wifi me-1"></i>MQTT
                                             </span>
                                         {% endif %}
                                     </td>
