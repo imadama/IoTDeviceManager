@@ -48,8 +48,9 @@ class CumulocityMqttClient:
         self.logger = logging.getLogger(f'MQTT-{device_id}')
         
         # Cumulocity MQTT topics
-        self.measurement_topic = f"s/us"  # Static template for measurements
+        self.measurement_topic = "s/us"  # Static template for measurements
         self.inventory_topic = f"s/ud/{device_id}"  # Device registration
+        self.command_topic = "s/ds"  # Device commands subscription
         
     def connect(self) -> bool:
         """Connect to Cumulocity MQTT broker"""
@@ -92,6 +93,7 @@ class CumulocityMqttClient:
             self.client.on_connect = self._on_connect
             self.client.on_disconnect = self._on_disconnect
             self.client.on_publish = self._on_publish
+            self.client.on_message = self._on_message
             self.client.on_log = self._on_log
             
             # Connect to broker
@@ -122,23 +124,32 @@ class CumulocityMqttClient:
             self.logger.info("Disconnected from MQTT broker")
     
     def register_device(self, device_type: str, device_name: str) -> bool:
-        """Register device with Cumulocity using device bootstrap"""
+        """Register device with Cumulocity using proper device bootstrap"""
         try:
+            # Subscribe to device commands first
+            self.client.subscribe("s/ds")
+            self.logger.info("Subscribed to device commands topic (s/ds)")
+            
             # Device registration message using static template
             # 100,<device_name>,<device_type>
-            registration_msg = f"100,{device_name},{device_type}"
+            registration_msg = f"100,{device_name},c8y_MQTTDevice"
             
-            result = self.client.publish(self.inventory_topic, registration_msg)
+            result = self.client.publish("s/us", registration_msg, qos=2)
+            result.wait_for_publish()
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                self.logger.info(f"Device registration sent: {device_name} ({device_type})")
+                self.logger.info(f"Device registration sent: {device_name}")
                 
-                # Send device restart message to complete registration
-                restart_msg = "102"
-                restart_result = self.client.publish(self.measurement_topic, restart_msg)
+                # Send device hardware info (110 template)
+                hardware_msg = f"110,{self.device_id},IoT Simulator Model,v1.0"
+                hw_result = self.client.publish("s/us", hardware_msg)
                 
-                if restart_result.rc == mqtt.MQTT_ERR_SUCCESS:
-                    self.logger.info(f"Device restart signal sent for {device_name}")
+                # Send supported operations (114 template)
+                operations_msg = "114,c8y_Restart,c8y_Configuration"
+                ops_result = self.client.publish("s/us", operations_msg)
+                
+                if hw_result.rc == mqtt.MQTT_ERR_SUCCESS and ops_result.rc == mqtt.MQTT_ERR_SUCCESS:
+                    self.logger.info(f"Device metadata sent for {device_name}")
                 
                 return True
             else:
@@ -164,7 +175,8 @@ class CumulocityMqttClient:
             timestamp = measurement_data.get('timestamp', datetime.now().isoformat())
             device_id = measurement_data.get('device_id', self.device_id)
             
-            # Send multiple measurements using Cumulocity static templates
+            # Send measurements using Cumulocity static templates
+            # Using template 211 for temperature-like measurements and custom templates
             measurements = [
                 f"200,c8y_Voltage,{measurement_data['voltage']},V,{timestamp}",
                 f"200,c8y_Current,{measurement_data['current']},A,{timestamp}",
@@ -217,9 +229,14 @@ class CumulocityMqttClient:
                 self.logger.warning("Not connected to MQTT broker")
                 return False
             
+            # Validate topic for MQTT compliance
+            if topic and ('*' in topic or '+' in topic or '#' in topic):
+                self.logger.error("Topic cannot contain MQTT wildcards (* + #)")
+                return False
+            
             # Use default topic and message if not provided
             test_topic = topic or self.measurement_topic
-            test_message = message or f"TEST,{self.device_id},Test message from IoT simulator,{datetime.now().isoformat()}"
+            test_message = message or f"400,Test message from IoT simulator,{datetime.now().isoformat()}"
             
             result = self.client.publish(test_topic, test_message)
             
@@ -262,6 +279,38 @@ class CumulocityMqttClient:
     def _on_publish(self, client, userdata, mid):
         """Callback for successful publish"""
         self.logger.debug(f"Message {mid} published successfully")
+    
+    def _on_message(self, client, userdata, message):
+        """Callback for incoming messages"""
+        try:
+            payload = message.payload.decode("utf-8")
+            self.logger.info(f"Received message on {message.topic}: {payload}")
+            
+            # Handle device restart command (510)
+            if payload.startswith("510"):
+                self.logger.info("Received restart command from Cumulocity")
+                self._handle_restart_command()
+                
+        except Exception as e:
+            self.logger.error(f"Error processing incoming message: {e}")
+    
+    def _handle_restart_command(self):
+        """Handle device restart command from Cumulocity"""
+        try:
+            # Send restart executing status (501)
+            self.client.publish("s/us", "501,c8y_Restart", qos=2)
+            self.logger.info("Restart command acknowledged")
+            
+            # Simulate restart delay
+            import time
+            time.sleep(1)
+            
+            # Send restart completed status (503) 
+            self.client.publish("s/us", "503,c8y_Restart", qos=2)
+            self.logger.info("Restart command completed")
+            
+        except Exception as e:
+            self.logger.error(f"Error handling restart command: {e}")
     
     def _on_log(self, client, userdata, level, buf):
         """Callback for MQTT logging"""

@@ -45,11 +45,13 @@ Preferred communication style: Simple, everyday language.
 - **mqtt_client.py**: Cumulocity MQTT client with SSL/TLS, certificate auth, MQTT 3.1.1 protocol, and test messaging
 
 ### MQTT Integration Features
-- **Device Registration**: Automatic device bootstrap and registration with Cumulocity
-- **Real-time Measurements**: Voltage, current, power, and kWh data via static templates
-- **Test Messaging**: Custom topic and message testing functionality
-- **SSL/TLS Security**: Production-ready secure connections
-- **Error Handling**: Comprehensive connection and authentication error reporting
+- **Device Registration**: Complete Cumulocity device bootstrap with hardware info and supported operations
+- **Real-time Measurements**: Voltage, current, power, and kWh data via static templates (200 series)
+- **Command Handling**: Device restart commands (510) with proper acknowledgment (501/503)
+- **Device Metadata**: Hardware information (110) and supported operations (114) templates
+- **Test Messaging**: Custom topic and message testing with wildcard validation
+- **SSL/TLS Security**: Production-ready secure connections with tenant/username authentication
+- **Error Handling**: Comprehensive connection, authentication, and message validation
 
 ### Device Types Supported
 - **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)
