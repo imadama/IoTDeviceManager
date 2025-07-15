@@ -62,7 +62,15 @@ class CumulocityMqttClient:
             
             # Set authentication if provided
             if self.username and self.password:
-                self.client.username_pw_set(self.username, self.password)
+                # Ensure username includes tenant if not already formatted correctly
+                formatted_username = self.username
+                if self.tenant and '/' not in self.username:
+                    formatted_username = f"{self.tenant}/{self.username}"
+                elif '/' not in self.username:
+                    self.logger.warning("Username should be in format 'tenant/username' for Cumulocity")
+                
+                self.client.username_pw_set(formatted_username, self.password)
+                self.logger.info(f"Authentication set for user: {formatted_username}")
             
             # Configure SSL/TLS if enabled
             if self.use_ssl:

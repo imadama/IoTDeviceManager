@@ -16,7 +16,7 @@ Preferred communication style: Simple, everyday language.
 - **Process Management**: Python multiprocessing for running virtual device simulations
 - **Data Models**: Simple Python classes for DeviceStatus and Measurement entities
 - **Device Type Abstraction**: Abstract Base Class pattern for extensible device types with DeviceTypeInterface
-- **MQTT Integration**: Cumulocity IoT platform connectivity using paho-mqtt library
+- **MQTT Integration**: Cumulocity IoT platform connectivity using paho-mqtt library with MQTT 3.1.1 protocol
 
 ### Frontend Architecture
 - **Template Engine**: Jinja2 templates with Flask
