@@ -54,7 +54,11 @@ class CumulocityMqttClient:
     def connect(self) -> bool:
         """Connect to Cumulocity MQTT broker"""
         try:
-            self.client = mqtt.Client(client_id=f"{self.device_id}_{int(time.time())}")
+            # Use MQTT version 3.1.1 for Cumulocity compatibility
+            self.client = mqtt.Client(
+                client_id=f"{self.device_id}_{int(time.time())}", 
+                protocol=mqtt.MQTTv311
+            )
             
             # Set authentication if provided
             if self.username and self.password:
@@ -205,7 +209,15 @@ class CumulocityMqttClient:
             self.logger.info("Successfully connected to Cumulocity MQTT broker")
         else:
             self.connected = False
-            self.logger.error(f"Failed to connect to MQTT broker, return code {rc}")
+            error_messages = {
+                1: "Connection refused - incorrect protocol version",
+                2: "Connection refused - invalid client identifier",
+                3: "Connection refused - server unavailable", 
+                4: "Connection refused - bad username or password",
+                5: "Connection refused - not authorized"
+            }
+            error_msg = error_messages.get(rc, f"Unknown error code {rc}")
+            self.logger.error(f"Failed to connect to MQTT broker: {error_msg} (code {rc})")
     
     def _on_disconnect(self, client, userdata, rc):
         """Callback for MQTT disconnection"""

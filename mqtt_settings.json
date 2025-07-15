@@ -1,10 +1,15 @@
 {
   "enabled": true,
-  "broker_host": "o-nexus.cumulocity.com/mqtt",
+  "broker_host": "o-nexus.cumulocity.com",
   "broker_port": 8883,
   "username": "imad.amazyan@o-nexus.com",
   "password": "Imad2003!",
   "tenant": "t2516496338",
   "use_ssl": true,
-  "device_prefix": "iot_sim_"
+  "device_prefix": "iot_sim_",
+  "ca_cert_path": "",
+  "client_cert_path": "",
+  "client_key_path": "",
+  "bootstrap_user": "",
+  "bootstrap_password": ""
 }

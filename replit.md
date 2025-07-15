@@ -42,6 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **device_types.py**: Abstract device type implementations with DeviceTypeInterface, registry pattern for extensibility
 - **database.py**: SQLite database wrapper with connection management
 - **models.py**: Data models for DeviceStatus and Measurement entities
+- **mqtt_client.py**: Cumulocity MQTT client with SSL/TLS, certificate auth, and MQTT 3.1.1 protocol support
 
 ### Device Types Supported
 - **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)

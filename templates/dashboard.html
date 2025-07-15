@@ -188,12 +188,16 @@
                         1. Create device bootstrap credentials in Device Management → Registration<br>
                         2. Use format: tenant/username for username field<br>
                         3. For SSL: Use port 8883 and check "Use SSL/TLS"<br>
-                        4. Devices will auto-register when started<br>
-                        5. Changes apply to newly started devices<br><br>
+                        4. Protocol: MQTT 3.1.1 (automatically configured)<br>
+                        5. Devices will auto-register when started<br>
+                        6. Changes apply to newly started devices<br><br>
                         <strong>Authentication Methods:</strong><br>
                         • <strong>Basic Auth:</strong> Username/password (tenant/username format)<br>
                         • <strong>Certificate Auth:</strong> Client certificates (requires CA setup)<br>
-                        • <strong>Bootstrap:</strong> Device bootstrap credentials for auto-registration
+                        • <strong>Bootstrap:</strong> Device bootstrap credentials for auto-registration<br><br>
+                        <strong>Common Issues:</strong><br>
+                        • Code 4: Bad username/password - check credentials<br>
+                        • Code 5: Not authorized - verify device registration in Cumulocity
                     </small>
                 </div>
             </div>
