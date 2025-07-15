@@ -174,7 +174,10 @@ def api_device_status():
             
             devices_data.append(device_data)
         
-        return jsonify({'devices': devices_data})
+        return jsonify({'devices': devices_data, 'mqtt_info': {
+            'enabled': mqtt_settings.is_enabled(),
+            'broker_host': mqtt_settings.load_settings().get('broker_host', 'Not configured')
+        }})
     except Exception as e:
         logging.error(f"Error getting device status: {e}")
         return jsonify({'error': str(e)}), 500
@@ -363,6 +366,36 @@ def send_mqtt_test():
         logging.error(f"Error sending test message: {e}")
     
     return redirect(url_for('dashboard'))
+
+@app.route('/api/mqtt_devices')
+def api_mqtt_devices():
+    """API endpoint to get MQTT connected devices"""
+    try:
+        from mqtt_client import mqtt_settings
+        
+        if not mqtt_settings.is_enabled():
+            return jsonify({'connected_devices': [], 'mqtt_enabled': False})
+        
+        # Get active devices
+        active_devices = []
+        for device in device_manager.get_all_devices():
+            if device.status == 'active':
+                active_devices.append({
+                    'device_id': device.device_id,
+                    'device_type': device.device_type,
+                    'cumulocity_name': f"iot_sim_{device.device_id}"
+                })
+        
+        settings = mqtt_settings.load_settings()
+        return jsonify({
+            'connected_devices': active_devices,
+            'mqtt_enabled': True,
+            'broker_host': settings.get('broker_host', 'Not configured'),
+            'total_connected': len(active_devices)
+        })
+    except Exception as e:
+        logging.error(f"Error getting MQTT devices: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

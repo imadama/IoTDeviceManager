@@ -7,8 +7,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update last update time every second
     setInterval(updateLastUpdateTime, 1000);
     
-    // Initial update
+    // Load MQTT devices info every 30 seconds
+    setInterval(loadMqttDevices, 30000);
+    
+    // Initial updates
     updateLastUpdateTime();
+    loadMqttDevices();
     
     // Add confirmation dialogs for critical actions
     setupConfirmationDialogs();
@@ -186,6 +190,71 @@ function handleDeviceAction(button, action) {
         button.innerHTML = originalHtml;
         button.classList.remove('disabled');
     }, 2000);
+}
+
+// Load MQTT connected devices
+function loadMqttDevices() {
+    const mqttDevicesList = document.getElementById('mqtt-devices-list');
+    if (!mqttDevicesList) return;
+    
+    fetch('/api/mqtt_devices')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.mqtt_enabled) {
+                mqttDevicesList.innerHTML = '<div class="text-muted">MQTT is not enabled</div>';
+                return;
+            }
+            
+            if (data.connected_devices.length === 0) {
+                mqttDevicesList.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-wifi-slash fa-2x text-muted mb-2"></i>
+                        <div class="text-muted">No devices connected to ${data.broker_host}</div>
+                        <small class="text-muted">Start a device to see it here</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let deviceHtml = `
+                <div class="mb-3">
+                    <small class="text-muted">Connected to: <strong>${data.broker_host}</strong></small>
+                </div>
+                <div class="row">
+            `;
+            
+            data.connected_devices.forEach(device => {
+                deviceHtml += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-success">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title mb-1">
+                                            <i class="fas fa-wifi text-success me-2"></i>${device.device_id}
+                                        </h6>
+                                        <small class="text-muted">${device.device_type}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success">Connected</span>
+                                        <div class="mt-1">
+                                            <small class="text-muted">Cumulocity: ${device.cumulocity_name}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            deviceHtml += '</div>';
+            mqttDevicesList.innerHTML = deviceHtml;
+        })
+        .catch(error => {
+            console.error('Error loading MQTT devices:', error);
+            mqttDevicesList.innerHTML = '<div class="text-danger">Error loading MQTT device status</div>';
+        });
 }
 
 // Add click handlers for action buttons

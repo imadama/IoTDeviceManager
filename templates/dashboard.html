@@ -359,6 +359,29 @@
         </div>
     </div>
 </div>
+
+{% if mqtt_enabled %}
+<!-- MQTT Device Connection Status -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-wifi me-2"></i>Cumulocity Connected Devices
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="mqtt-devices-list">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading MQTT device status...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}

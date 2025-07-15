@@ -152,7 +152,7 @@ class CumulocityMqttClient:
             result.wait_for_publish()
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                self.logger.info(f"Device registration sent: {device_name}")
+                self.logger.info(f"✓ Device '{self.device_id}' registered in Cumulocity as '{device_name}'")
                 self.registered = True
                 
                 # Send device hardware info (110 template)
@@ -209,7 +209,7 @@ class CumulocityMqttClient:
             
             if success_count > 0:
                 self.last_message_time = datetime.now()
-                self.logger.debug(f"Sent {success_count}/{len(measurements)} measurements for {device_id}")
+                self.logger.debug(f"📊 Device '{device_id}' sent {success_count}/{len(measurements)} measurements to Cumulocity")
                 return True
             else:
                 self.logger.error("Failed to send any measurements")
@@ -271,7 +271,7 @@ class CumulocityMqttClient:
         """Callback for MQTT connection"""
         if rc == 0:
             self.connected = True
-            self.logger.info("Successfully connected to Cumulocity MQTT broker")
+            self.logger.info(f"✓ Device '{self.device_id}' connected to Cumulocity MQTT broker ({self.broker_host})")
         else:
             self.connected = False
             error_messages = {
