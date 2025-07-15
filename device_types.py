@@ -5,6 +5,7 @@ Provides abstraction layer for different device types and their specifications.
 
 from abc import ABC, abstractmethod
 import random
+import os
 from typing import Dict, Any
 from datetime import datetime
 
@@ -40,6 +41,46 @@ class DeviceTypeInterface(ABC):
     def generate_measurement_data(self, device_id: str) -> Dict[str, Any]:
         """Generate realistic measurement data for this device type"""
         pass
+    
+    def _calculate_cumulative_kwh(self, device_id: str, current_power: float) -> float:
+        """Calculate cumulative kWh based on power consumption over time interval"""
+        try:
+            # Get the last measurement from database to get previous kWh
+            database_url = os.environ.get("DATABASE_URL")
+            if database_url:
+                # Use PostgreSQL database
+                from database_postgres import PostgresDatabase
+                db = PostgresDatabase()
+                measurements = db.get_measurements(device_id=device_id, limit=1)
+            else:
+                # Use SQLite database
+                from database import Database
+                db = Database()
+                measurements = db.get_measurements(device_id=device_id, limit=1)
+            
+            # Get previous kWh value (start from 0 if no previous measurements)
+            previous_kwh = 0.0
+            if measurements:
+                previous_kwh = float(measurements[0].get('kwh', 0))
+            
+            # Calculate energy consumed in this interval
+            # Assuming 5-second intervals between measurements
+            interval_minutes = 5 / 60  # 5 seconds = 1/12 minute
+            interval_hours = interval_minutes / 60  # Convert to hours
+            
+            # Energy = Power × Time (kWh = kW × hours)
+            power_kw = current_power / 1000  # Convert watts to kilowatts
+            energy_consumed = power_kw * interval_hours
+            
+            # Add to previous cumulative total
+            new_kwh = previous_kwh + energy_consumed
+            
+            return round(new_kwh, 6)  # Round to 6 decimal places for precision
+            
+        except Exception as e:
+            # Fallback: return a small increment based on power
+            power_kw = current_power / 1000
+            return round(power_kw * 0.001, 6)  # Small increment
     
     @property
     @abstractmethod
@@ -94,8 +135,12 @@ class SolarPanelType(DeviceTypeInterface):
     def generate_measurement_data(self, device_id: str) -> Dict[str, Any]:
         voltage = round(random.uniform(*self.voltage_range), 2)
         current = round(random.uniform(*self.current_range), 2)
-        power = round(random.uniform(*self.power_range), 2)
-        kwh = round(random.uniform(0.1, 0.5), 3)
+        
+        # Calculate power: P = V × I
+        power = round(voltage * current, 2)
+        
+        # Get previous kWh reading to calculate cumulative kWh
+        kwh = self._calculate_cumulative_kwh(device_id, power)
         
         return {
             'timestamp': datetime.now().isoformat(),
@@ -141,8 +186,12 @@ class HeatPumpType(DeviceTypeInterface):
     def generate_measurement_data(self, device_id: str) -> Dict[str, Any]:
         voltage = round(random.uniform(*self.voltage_range), 2)
         current = round(random.uniform(*self.current_range), 2)
-        power = round(random.uniform(*self.power_range), 2)
-        kwh = round(random.uniform(0.3, 0.8), 3)
+        
+        # Calculate power: P = V × I
+        power = round(voltage * current, 2)
+        
+        # Get previous kWh reading to calculate cumulative kWh
+        kwh = self._calculate_cumulative_kwh(device_id, power)
         
         return {
             'timestamp': datetime.now().isoformat(),
@@ -188,8 +237,12 @@ class MainGridType(DeviceTypeInterface):
     def generate_measurement_data(self, device_id: str) -> Dict[str, Any]:
         voltage = round(random.uniform(*self.voltage_range), 2)
         current = round(random.uniform(*self.current_range), 2)
-        power = round(random.uniform(*self.power_range), 2)
-        kwh = round(random.uniform(0.4, 2.0), 3)
+        
+        # Calculate power: P = V × I
+        power = round(voltage * current, 2)
+        
+        # Get previous kWh reading to calculate cumulative kWh
+        kwh = self._calculate_cumulative_kwh(device_id, power)
         
         return {
             'timestamp': datetime.now().isoformat(),

@@ -28,13 +28,20 @@ class VirtualDevice:
         else:
             # Fallback for unknown device types
             import random
+            voltage = round(random.uniform(220, 240), 2)
+            current = round(random.uniform(1, 10), 2)
+            power = round(voltage * current, 2)  # P = V × I
+            
+            # Simple incremental kWh for fallback
+            kwh = round(power / 1000 * 0.001, 6)
+            
             return {
                 'timestamp': datetime.now().isoformat(),
                 'device_id': self.device_id,
-                'voltage': round(random.uniform(220, 240), 2),
-                'current': round(random.uniform(1, 10), 2),
-                'power': round(random.uniform(100, 2000), 2),
-                'kwh': round(random.uniform(0.02, 0.3), 3)
+                'voltage': voltage,
+                'current': current,
+                'power': power,
+                'kwh': kwh
             }
 
 def device_worker(device_id, device_type):
