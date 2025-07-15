@@ -32,7 +32,29 @@ class DeviceManager:
             try:
                 with open(self.status_file, 'r') as f:
                     data = json.load(f)
-                    self.device_counters = data.get('counters', self.device_counters)
+                    
+                    # Load counters but ensure all registered device types are present
+                    loaded_counters = data.get('counters', {})
+                    for type_name in device_type_registry.get_all_type_names():
+                        device_type_impl = device_type_registry.get_device_type(type_name)
+                        type_id = device_type_impl.type_id
+                        
+                        # Use loaded counter or initialize to 0
+                        if type_id in loaded_counters:
+                            self.device_counters[type_id] = loaded_counters[type_id]
+                        else:
+                            # Check if old format counters exist (migrate from old names)
+                            old_name_mapping = {
+                                'pv': 'PV',
+                                'heatpump': 'Heat Pump', 
+                                'maingrid': 'Main Grid'
+                            }
+                            old_name = old_name_mapping.get(type_id)
+                            if old_name and old_name in loaded_counters:
+                                self.device_counters[type_id] = loaded_counters[old_name]
+                            else:
+                                self.device_counters[type_id] = 0
+                    
                     devices_status = data.get('devices', {})
                     
                     # Load device status but don't start processes automatically
