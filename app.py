@@ -150,8 +150,34 @@ def data_view():
 @app.route('/api/device_status')
 def api_device_status():
     """API endpoint to get current device status (for AJAX updates)"""
-    devices = device_manager.get_all_devices()
-    return jsonify(devices)
+    try:
+        devices = device_manager.get_all_devices()
+        
+        # Convert to simple format for JSON with MQTT status
+        devices_data = []
+        for device in devices:
+            device_data = {
+                'device_id': device.device_id,
+                'device_type': device.device_type,
+                'status': device.status,
+                'mqtt_status': 'unknown'
+            }
+            
+            # Check MQTT status if device is active and MQTT is enabled
+            from mqtt_client import mqtt_settings
+            if device.status == 'active' and mqtt_settings.is_enabled():
+                device_data['mqtt_status'] = 'connected'  # Assume connected if sending data
+            elif mqtt_settings.is_enabled():
+                device_data['mqtt_status'] = 'disconnected'
+            else:
+                device_data['mqtt_status'] = 'disabled'
+            
+            devices_data.append(device_data)
+        
+        return jsonify({'devices': devices_data})
+    except Exception as e:
+        logging.error(f"Error getting device status: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/delete_device/<device_id>')
 def delete_device(device_id):

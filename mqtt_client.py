@@ -45,6 +45,8 @@ class CumulocityMqttClient:
         self.client_key_path = client_key_path
         self.client = None
         self.connected = False
+        self.registered = False
+        self.last_message_time = None
         self.logger = logging.getLogger(f'MQTT-{device_id}')
         
         # Cumulocity MQTT topics
@@ -121,7 +123,19 @@ class CumulocityMqttClient:
             self.client.loop_stop()
             self.client.disconnect()
             self.connected = False
+            self.registered = False
+            self.last_message_time = None
             self.logger.info("Disconnected from MQTT broker")
+    
+    def get_connection_status(self) -> dict:
+        """Get detailed connection status for monitoring"""
+        return {
+            'connected': self.connected,
+            'registered': self.registered,
+            'last_message_time': self.last_message_time.isoformat() if self.last_message_time else None,
+            'broker_host': self.broker_host,
+            'device_id': self.device_id
+        }
     
     def register_device(self, device_type: str, device_name: str) -> bool:
         """Register device with Cumulocity using proper device bootstrap"""
@@ -139,6 +153,7 @@ class CumulocityMqttClient:
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 self.logger.info(f"Device registration sent: {device_name}")
+                self.registered = True
                 
                 # Send device hardware info (110 template)
                 hardware_msg = f"110,{self.device_id},IoT Simulator Model,v1.0"
@@ -193,6 +208,7 @@ class CumulocityMqttClient:
                     self.logger.error(f"Failed to publish measurement: {measurement}")
             
             if success_count > 0:
+                self.last_message_time = datetime.now()
                 self.logger.debug(f"Sent {success_count}/{len(measurements)} measurements for {device_id}")
                 return True
             else:

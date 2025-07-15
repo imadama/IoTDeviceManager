@@ -18,14 +18,48 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateDeviceStatus() {
-    // In a production app, this would make an AJAX call to update device status
-    // For now, we'll just refresh the page periodically
-    console.log('Checking for device status updates...');
-    
-    // Optional: Use fetch to get updated status without full page reload
-    // fetch('/api/device_status')
-    //     .then(response => response.json())
-    //     .then(data => updateDeviceTable(data));
+    fetch('/api/device_status')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Checking for device status updates...');
+            
+            // Update MQTT status indicators
+            if (data.devices) {
+                data.devices.forEach(device => {
+                    const mqttElement = document.querySelector(`.mqtt-status-${device.device_id}`);
+                    if (mqttElement) {
+                        const textElement = mqttElement.querySelector('.mqtt-text');
+                        const iconElement = mqttElement.querySelector('i');
+                        
+                        // Update MQTT status display
+                        if (device.mqtt_status === 'connected') {
+                            mqttElement.className = `badge bg-success ms-1 mqtt-status-${device.device_id}`;
+                            iconElement.className = 'fas fa-wifi me-1';
+                            if (textElement) textElement.textContent = 'MQTT ✓';
+                            mqttElement.title = 'MQTT Connected to Cumulocity';
+                        } else if (device.mqtt_status === 'disconnected') {
+                            mqttElement.className = `badge bg-warning ms-1 mqtt-status-${device.device_id}`;
+                            iconElement.className = 'fas fa-wifi me-1';
+                            if (textElement) textElement.textContent = 'MQTT ✗';
+                            mqttElement.title = 'MQTT Disconnected';
+                        } else if (device.mqtt_status === 'disabled') {
+                            mqttElement.className = `badge bg-secondary ms-1 mqtt-status-${device.device_id}`;
+                            iconElement.className = 'fas fa-wifi-slash me-1';
+                            if (textElement) textElement.textContent = 'MQTT Off';
+                            mqttElement.title = 'MQTT Disabled';
+                        } else {
+                            mqttElement.className = `badge bg-info ms-1 mqtt-status-${device.device_id}`;
+                            iconElement.className = 'fas fa-wifi me-1';
+                            if (textElement) textElement.textContent = 'MQTT ?';
+                            mqttElement.title = 'MQTT Status Unknown';
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching device status:', error);
+        });
 }
 
 function updateLastUpdateTime() {

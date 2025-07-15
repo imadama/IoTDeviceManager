@@ -218,6 +218,10 @@
                         • Username format: tenant/username (handled automatically)<br>
                         • Host format: your-tenant.cumulocity.com<br>
                         • SSL/TLS required for production environments<br><br>
+                        <strong>Connection Status:</strong><br>
+                        • ✅ Connected: Device successfully sending data to Cumulocity<br>
+                        • ⚠️ Disconnected: MQTT enabled but connection failed<br>
+                        • ❌ Disabled: MQTT integration not enabled<br><br>
                         <strong>Common Issues:</strong><br>
                         • Code 4: Bad username/password - check credentials<br>
                         • Code 5: Not authorized - verify device registration and tenant access
@@ -269,8 +273,9 @@
                                             </span>
                                         {% endif %}
                                         {% if mqtt_enabled %}
-                                            <span class="badge bg-info ms-1">
-                                                <i class="fas fa-wifi me-1"></i>MQTT
+                                            <span class="badge bg-info ms-1 mqtt-status-{{ device.device_id }}" 
+                                                  title="MQTT Connection Status">
+                                                <i class="fas fa-wifi me-1"></i><span class="mqtt-text">MQTT</span>
                                             </span>
                                         {% endif %}
                                     </td>
