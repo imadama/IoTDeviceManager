@@ -174,13 +174,26 @@
                     </button>
                 </form>
                 
+                {% if mqtt_enabled %}
+                <div class="mt-2">
+                    <a href="{{ url_for('test_mqtt_connection') }}" class="btn btn-outline-success btn-sm w-100">
+                        <i class="fas fa-plug me-1"></i>Test MQTT Connection
+                    </a>
+                </div>
+                {% endif %}
+                
                 <div class="mt-3">
                     <small class="text-muted">
                         <strong>Cumulocity Setup:</strong><br>
-                        1. Create device bootstrap credentials in Device Management<br>
+                        1. Create device bootstrap credentials in Device Management → Registration<br>
                         2. Use format: tenant/username for username field<br>
-                        3. Devices will auto-register when started<br>
-                        4. Changes apply to newly started devices
+                        3. For SSL: Use port 8883 and check "Use SSL/TLS"<br>
+                        4. Devices will auto-register when started<br>
+                        5. Changes apply to newly started devices<br><br>
+                        <strong>Authentication Methods:</strong><br>
+                        • <strong>Basic Auth:</strong> Username/password (tenant/username format)<br>
+                        • <strong>Certificate Auth:</strong> Client certificates (requires CA setup)<br>
+                        • <strong>Bootstrap:</strong> Device bootstrap credentials for auto-registration
                     </small>
                 </div>
             </div>

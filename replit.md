@@ -66,6 +66,7 @@ Preferred communication style: Simple, everyday language.
 - **Flask**: Web framework for HTTP handling and template rendering
 - **Flask-SQLAlchemy**: ORM for database operations with PostgreSQL
 - **psycopg2-binary**: PostgreSQL adapter for Python
+- **paho-mqtt**: MQTT client library for Cumulocity IoT platform connectivity
 - **sqlite3**: Database operations (built-in Python module) - fallback only
 - **multiprocessing**: Process management for device simulation
 - **logging**: Application logging and debugging

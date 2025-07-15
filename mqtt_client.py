@@ -5,6 +5,7 @@ MQTT Client for Cumulocity IoT Platform Integration
 import json
 import logging
 import time
+import ssl
 from typing import Dict, Any, Optional
 import paho.mqtt.client as mqtt
 from datetime import datetime
@@ -14,17 +15,23 @@ class CumulocityMqttClient:
     
     def __init__(self, broker_host: str, broker_port: int = 1883, 
                  username: str = None, password: str = None, 
-                 tenant: str = None, device_id: str = None):
+                 tenant: str = None, device_id: str = None,
+                 use_ssl: bool = False, ca_cert_path: str = None,
+                 client_cert_path: str = None, client_key_path: str = None):
         """
         Initialize Cumulocity MQTT client
         
         Args:
             broker_host: MQTT broker hostname (e.g., your-tenant.cumulocity.com)
             broker_port: MQTT broker port (default 1883, use 8883 for SSL)
-            username: Username for authentication
+            username: Username for authentication (format: tenant/username)
             password: Password for authentication  
             tenant: Cumulocity tenant ID
             device_id: Unique device identifier
+            use_ssl: Enable SSL/TLS connection
+            ca_cert_path: Path to CA certificate file
+            client_cert_path: Path to client certificate file  
+            client_key_path: Path to client key file
         """
         self.broker_host = broker_host
         self.broker_port = broker_port
@@ -32,6 +39,10 @@ class CumulocityMqttClient:
         self.password = password
         self.tenant = tenant
         self.device_id = device_id
+        self.use_ssl = use_ssl
+        self.ca_cert_path = ca_cert_path
+        self.client_cert_path = client_cert_path
+        self.client_key_path = client_key_path
         self.client = None
         self.connected = False
         self.logger = logging.getLogger(f'MQTT-{device_id}')
@@ -48,6 +59,22 @@ class CumulocityMqttClient:
             # Set authentication if provided
             if self.username and self.password:
                 self.client.username_pw_set(self.username, self.password)
+            
+            # Configure SSL/TLS if enabled
+            if self.use_ssl:
+                context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+                
+                # Load CA certificate if provided
+                if self.ca_cert_path:
+                    context.load_verify_locations(self.ca_cert_path)
+                
+                # Load client certificate and key if provided (for mutual TLS)
+                if self.client_cert_path and self.client_key_path:
+                    context.load_cert_chain(self.client_cert_path, self.client_key_path)
+                
+                # Set SSL context
+                self.client.tls_set_context(context)
+                self.logger.info(f"SSL/TLS enabled for connection to {self.broker_host}:{self.broker_port}")
             
             # Set callbacks
             self.client.on_connect = self._on_connect
@@ -83,7 +110,7 @@ class CumulocityMqttClient:
             self.logger.info("Disconnected from MQTT broker")
     
     def register_device(self, device_type: str, device_name: str) -> bool:
-        """Register device with Cumulocity"""
+        """Register device with Cumulocity using device bootstrap"""
         try:
             # Device registration message using static template
             # 100,<device_name>,<device_type>
@@ -93,6 +120,14 @@ class CumulocityMqttClient:
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 self.logger.info(f"Device registration sent: {device_name} ({device_type})")
+                
+                # Send device restart message to complete registration
+                restart_msg = "102"
+                restart_result = self.client.publish(self.measurement_topic, restart_msg)
+                
+                if restart_result.rc == mqtt.MQTT_ERR_SUCCESS:
+                    self.logger.info(f"Device restart signal sent for {device_name}")
+                
                 return True
             else:
                 self.logger.error(f"Failed to send device registration: {result.rc}")
@@ -201,7 +236,12 @@ class MqttSettings:
             'password': '',
             'tenant': '',
             'use_ssl': False,
-            'device_prefix': 'iot_sim_'
+            'device_prefix': 'iot_sim_',
+            'ca_cert_path': '',
+            'client_cert_path': '',
+            'client_key_path': '',
+            'bootstrap_user': '',
+            'bootstrap_password': ''
         }
         self.settings = self.load_settings()
     
@@ -246,7 +286,11 @@ class MqttSettings:
             'broker_port': 8883 if self.settings.get('use_ssl', False) else self.settings.get('broker_port', 1883),
             'username': self.settings.get('username', ''),
             'password': self.settings.get('password', ''),
-            'tenant': self.settings.get('tenant', '')
+            'tenant': self.settings.get('tenant', ''),
+            'use_ssl': self.settings.get('use_ssl', False),
+            'ca_cert_path': self.settings.get('ca_cert_path', ''),
+            'client_cert_path': self.settings.get('client_cert_path', ''),
+            'client_key_path': self.settings.get('client_key_path', '')
         }
 
 # Global MQTT settings instance

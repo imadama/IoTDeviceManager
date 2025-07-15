@@ -242,5 +242,48 @@ def update_mqtt_settings():
     
     return redirect(url_for('dashboard'))
 
+@app.route('/test_mqtt_connection')
+def test_mqtt_connection():
+    """Test MQTT connection to Cumulocity"""
+    try:
+        from mqtt_client import CumulocityMqttClient, mqtt_settings
+        
+        if not mqtt_settings.is_enabled():
+            flash('MQTT is not enabled. Please enable and configure MQTT first.', 'warning')
+            return redirect(url_for('dashboard'))
+        
+        connection_params = mqtt_settings.get_connection_params()
+        
+        if not connection_params['broker_host']:
+            flash('MQTT broker host is required. Please configure MQTT settings.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Create test client
+        test_client = CumulocityMqttClient(
+            broker_host=connection_params['broker_host'],
+            broker_port=connection_params['broker_port'],
+            username=connection_params['username'],
+            password=connection_params['password'],
+            tenant=connection_params['tenant'],
+            device_id='test_device',
+            use_ssl=connection_params['use_ssl'],
+            ca_cert_path=connection_params['ca_cert_path'],
+            client_cert_path=connection_params['client_cert_path'],
+            client_key_path=connection_params['client_key_path']
+        )
+        
+        # Test connection
+        if test_client.connect():
+            flash('MQTT connection successful! Ready to send device data to Cumulocity.', 'success')
+            test_client.disconnect()
+        else:
+            flash('MQTT connection failed. Please check your credentials and settings.', 'error')
+            
+    except Exception as e:
+        flash(f'Error testing MQTT connection: {str(e)}', 'error')
+        logging.error(f"Error testing MQTT connection: {e}")
+    
+    return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

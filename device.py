@@ -99,7 +99,11 @@ def device_worker(device_id, device_type, interval_seconds=None):
                     username=connection_params['username'],
                     password=connection_params['password'],
                     tenant=connection_params['tenant'],
-                    device_id=device_id
+                    device_id=device_id,
+                    use_ssl=connection_params['use_ssl'],
+                    ca_cert_path=connection_params['ca_cert_path'],
+                    client_cert_path=connection_params['client_cert_path'],
+                    client_key_path=connection_params['client_key_path']
                 )
                 
                 if mqtt_client.connect():

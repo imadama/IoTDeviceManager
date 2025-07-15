@@ -5,20 +5,10 @@
     "maingrid": 0
   },
   "devices": {
-    "heatpump001": {
-      "device_type": "Heat Pump",
-      "status": "stopped",
-      "created_at": "2025-07-15T10:35:42.951923"
-    },
     "pv001": {
       "device_type": "PV",
       "status": "stopped",
       "created_at": "2025-07-15T10:35:46.923650"
-    },
-    "pv002": {
-      "device_type": "PV",
-      "status": "stopped",
-      "created_at": "2025-07-15T10:35:49.666984"
     }
   }
 }
