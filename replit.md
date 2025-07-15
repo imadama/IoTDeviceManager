@@ -15,6 +15,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: SQLite for measurement data storage and device state persistence
 - **Process Management**: Python multiprocessing for running virtual device simulations
 - **Data Models**: Simple Python classes for DeviceStatus and Measurement entities
+- **Device Type Abstraction**: Abstract Base Class pattern for extensible device types with DeviceTypeInterface
 
 ### Frontend Architecture
 - **Template Engine**: Jinja2 templates with Flask
@@ -34,8 +35,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Core Application Components
 - **app.py**: Main Flask application with routes for dashboard and device management
-- **device_manager.py**: Manages virtual device lifecycle and process orchestration
-- **device.py**: Virtual device implementation with data generation logic
+- **device_manager.py**: Manages virtual device lifecycle and process orchestration using abstracted device types
+- **device.py**: Virtual device implementation with abstracted data generation logic
+- **device_types.py**: Abstract device type implementations with DeviceTypeInterface, registry pattern for extensibility
 - **database.py**: SQLite database wrapper with connection management
 - **models.py**: Data models for DeviceStatus and Measurement entities
 

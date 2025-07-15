@@ -91,15 +91,8 @@
                                         <code>{{ device.device_id }}</code>
                                     </td>
                                     <td>
-                                        {% if device.device_type == 'PV' %}
-                                            <i class="fas fa-solar-panel text-warning me-1"></i>
-                                        {% elif device.device_type == 'Heat Pump' %}
-                                            <i class="fas fa-thermometer-half text-info me-1"></i>
-                                        {% elif device.device_type == 'Main Grid' %}
-                                            <i class="fas fa-bolt text-primary me-1"></i>
-                                        {% else %}
-                                            <i class="fas fa-microchip text-secondary me-1"></i>
-                                        {% endif %}
+                                        {% set device_type_info = device_type_info_map.get(device.device_type, {'icon': 'fas fa-microchip', 'color': 'text-secondary'}) %}
+                                        <i class="{{ device_type_info.icon }} {{ device_type_info.color }} me-1"></i>
                                         {{ device.device_type }}
                                     </td>
                                     <td>

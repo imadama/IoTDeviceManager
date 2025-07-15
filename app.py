@@ -50,8 +50,23 @@ device_manager = DeviceManager(db)
 def dashboard():
     """Main dashboard page showing all devices and their status"""
     devices = device_manager.get_all_devices()
-    device_types = ['PV', 'Heat Pump', 'Main Grid']
-    return render_template('dashboard.html', devices=devices, device_types=device_types)
+    # Get device types from registry
+    from device_types import device_type_registry
+    device_types = device_type_registry.get_all_type_names()
+    
+    # Create device type info mapping for template
+    device_type_info_map = {}
+    for type_name in device_types:
+        device_type_impl = device_type_registry.get_device_type(type_name)
+        device_type_info_map[type_name] = {
+            'icon': device_type_impl.icon_class,
+            'color': device_type_impl.color_class
+        }
+    
+    return render_template('dashboard.html', 
+                         devices=devices, 
+                         device_types=device_types,
+                         device_type_info_map=device_type_info_map)
 
 @app.route('/add_device', methods=['POST'])
 def add_device():

@@ -4,20 +4,23 @@ import logging
 from multiprocessing import Process
 from models import DeviceStatus
 from device import device_worker
+from device_types import device_type_registry
 
 class DeviceManager:
-    """Manages virtual IoT devices and their processes"""
+    """Manages virtual IoT devices and their processes using abstracted device types"""
     
     def __init__(self, database):
         self.db = database
         self.devices = {}  # device_id -> Process object
         self.device_statuses = {}  # device_id -> DeviceStatus object
         self.status_file = 'device_status.json'
-        self.device_counters = {
-            'PV': 0,
-            'Heat Pump': 0,
-            'Main Grid': 0
-        }
+        
+        # Initialize counters dynamically from registry
+        self.device_counters = {}
+        for type_name in device_type_registry.get_all_type_names():
+            device_type_impl = device_type_registry.get_device_type(type_name)
+            self.device_counters[device_type_impl.type_id] = 0
+            
         self.logger = logging.getLogger('DeviceManager')
         
         # Load existing device status
@@ -77,28 +80,25 @@ class DeviceManager:
             self.logger.error(f"Error saving device status: {e}")
             
     def _get_device_type_from_id(self, device_id):
-        """Extract device type from device ID"""
-        if device_id.startswith('pv'):
-            return 'PV'
-        elif device_id.startswith('heatpump'):
-            return 'Heat Pump'
-        elif device_id.startswith('maingrid'):
-            return 'Main Grid'
-        return 'Unknown'
+        """Extract device type from device ID using registry"""
+        return device_type_registry.get_type_name_from_id(device_id)
         
     def _generate_device_id(self, device_type):
-        """Generate a unique device ID based on type"""
-        self.device_counters[device_type] += 1
-        counter = self.device_counters[device_type]
-        
-        if device_type == 'PV':
-            return f'pv{counter:03d}'
-        elif device_type == 'Heat Pump':
-            return f'heatpump{counter:03d}'
-        elif device_type == 'Main Grid':
-            return f'maingrid{counter:03d}'
-        else:
-            return f'device{counter:03d}'
+        """Generate a unique device ID based on type using abstraction"""
+        try:
+            device_type_impl = device_type_registry.get_device_type(device_type)
+            type_id = device_type_impl.type_id
+            
+            self.device_counters[type_id] += 1
+            counter = self.device_counters[type_id]
+            
+            return f'{type_id}{counter:03d}'
+        except ValueError:
+            # Fallback for unknown device types
+            self.device_counters.setdefault('unknown', 0)
+            self.device_counters['unknown'] += 1
+            counter = self.device_counters['unknown']
+            return f'unknown{counter:03d}'
             
     def add_device(self, device_type):
         """Add a new device"""
