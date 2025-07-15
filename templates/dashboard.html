@@ -181,6 +181,27 @@
                         <i class="fas fa-plug me-1"></i>Test MQTT Connection
                     </a>
                 </div>
+                
+                <!-- MQTT Test Message Form -->
+                <div class="mt-3 border-top pt-3">
+                    <h6 class="mb-3">Send Test Message</h6>
+                    <form action="{{ url_for('send_mqtt_test') }}" method="POST">
+                        <div class="mb-2">
+                            <label for="test_topic" class="form-label form-label-sm">Topic (optional)</label>
+                            <input type="text" class="form-control form-control-sm" id="test_topic" 
+                                   name="test_topic" placeholder="s/us (default if empty)">
+                        </div>
+                        <div class="mb-2">
+                            <label for="test_message" class="form-label form-label-sm">Message (optional)</label>
+                            <textarea class="form-control form-control-sm" id="test_message" 
+                                      name="test_message" rows="2" 
+                                      placeholder="Auto-generated test message if empty"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fas fa-paper-plane me-1"></i>Send Test Message
+                        </button>
+                    </form>
+                </div>
                 {% endif %}
                 
                 <div class="mt-3">

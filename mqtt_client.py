@@ -210,6 +210,30 @@ class CumulocityMqttClient:
             self.logger.error(f"Error sending alarm: {e}")
             return False
     
+    def send_test_message(self, topic: str = None, message: str = None) -> bool:
+        """Send a test message to a custom topic or default measurement topic"""
+        try:
+            if not self.connected:
+                self.logger.warning("Not connected to MQTT broker")
+                return False
+            
+            # Use default topic and message if not provided
+            test_topic = topic or self.measurement_topic
+            test_message = message or f"TEST,{self.device_id},Test message from IoT simulator,{datetime.now().isoformat()}"
+            
+            result = self.client.publish(test_topic, test_message)
+            
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.info(f"Test message sent to topic '{test_topic}': {test_message}")
+                return True
+            else:
+                self.logger.error(f"Failed to send test message: {result.rc}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error sending test message: {e}")
+            return False
+    
     def _on_connect(self, client, userdata, flags, rc):
         """Callback for MQTT connection"""
         if rc == 0:

@@ -7,7 +7,7 @@
   "devices": {
     "pv001": {
       "device_type": "PV",
-      "status": "stopped",
+      "status": "active",
       "created_at": "2025-07-15T10:35:46.923650"
     }
   }

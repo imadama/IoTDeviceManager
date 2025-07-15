@@ -285,5 +285,58 @@ def test_mqtt_connection():
     
     return redirect(url_for('dashboard'))
 
+@app.route('/send_mqtt_test', methods=['POST'])
+def send_mqtt_test():
+    """Send a test message to MQTT topic"""
+    try:
+        from mqtt_client import CumulocityMqttClient, mqtt_settings
+        
+        if not mqtt_settings.is_enabled():
+            flash('MQTT is not enabled. Please enable and configure MQTT first.', 'warning')
+            return redirect(url_for('dashboard'))
+        
+        # Get form data
+        test_topic = request.form.get('test_topic', '').strip()
+        test_message = request.form.get('test_message', '').strip()
+        
+        connection_params = mqtt_settings.get_connection_params()
+        
+        if not connection_params['broker_host']:
+            flash('MQTT broker host is required. Please configure MQTT settings.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Create test client
+        test_client = CumulocityMqttClient(
+            broker_host=connection_params['broker_host'],
+            broker_port=connection_params['broker_port'],
+            username=connection_params['username'],
+            password=connection_params['password'],
+            tenant=connection_params['tenant'],
+            device_id='test_device',
+            use_ssl=connection_params['use_ssl'],
+            ca_cert_path=connection_params['ca_cert_path'],
+            client_cert_path=connection_params['client_cert_path'],
+            client_key_path=connection_params['client_key_path']
+        )
+        
+        # Test connection and send message
+        if test_client.connect():
+            success = test_client.send_test_message(test_topic if test_topic else None, 
+                                                  test_message if test_message else None)
+            if success:
+                topic_name = test_topic if test_topic else 's/us (default)'
+                flash(f'Test message sent successfully to topic: {topic_name}', 'success')
+            else:
+                flash('Failed to send test message. Check logs for details.', 'error')
+            test_client.disconnect()
+        else:
+            flash('Failed to connect to MQTT broker for test.', 'error')
+            
+    except Exception as e:
+        flash(f'Error sending test message: {str(e)}', 'error')
+        logging.error(f"Error sending test message: {e}")
+    
+    return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
