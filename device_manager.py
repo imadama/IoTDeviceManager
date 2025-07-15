@@ -147,7 +147,12 @@ class DeviceManager:
             
         try:
             device_type = self._get_device_type_from_id(device_id)
-            process = Process(target=device_worker, args=(device_id, device_type))
+            
+            # Get current measurement interval from settings
+            from device_settings import device_settings
+            interval = device_settings.get_measurement_interval()
+            
+            process = Process(target=device_worker, args=(device_id, device_type, interval))
             process.start()
             
             self.devices[device_id] = process

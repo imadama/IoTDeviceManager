@@ -44,11 +44,16 @@ class VirtualDevice:
                 'kwh': kwh
             }
 
-def device_worker(device_id, device_type):
+def device_worker(device_id, device_type, interval_seconds=None):
     """Worker function that runs in a separate process for each device"""
     import os
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(f'Device-{device_id}')
+    
+    # Get measurement interval from settings if not provided
+    if interval_seconds is None:
+        from device_settings import device_settings
+        interval_seconds = device_settings.get_measurement_interval()
     
     # Create database connection for this process
     # Check if PostgreSQL is available, otherwise use SQLite
@@ -82,8 +87,9 @@ def device_worker(device_id, device_type):
         logger.info(f"Device worker {device_id} using SQLite")
         
     device = VirtualDevice(device_id, device_type)
+    device.interval_seconds = interval_seconds  # Store for kWh calculation
     
-    logger.info(f"Starting device worker for {device_id} ({device_type})")
+    logger.info(f"Starting device worker for {device_id} ({device_type}) with {interval_seconds}s interval")
     
     try:
         while True:
@@ -102,8 +108,8 @@ def device_worker(device_id, device_type):
             
             logger.debug(f"Generated data for {device_id}: {data}")
             
-            # Wait 5 seconds before next measurement
-            time.sleep(5)
+            # Wait for configured interval before next measurement
+            time.sleep(interval_seconds)
             
     except KeyboardInterrupt:
         logger.info(f"Device worker {device_id} stopped by interrupt")

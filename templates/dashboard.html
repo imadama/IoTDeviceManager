@@ -62,6 +62,45 @@
                 </form>
             </div>
         </div>
+        
+        <!-- Measurement Settings -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cog me-2"></i>Measurement Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_settings') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="measurement_interval" class="form-label">
+                            Measurement Interval 
+                            <small class="text-muted">(seconds)</small>
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="measurement_interval" 
+                               name="measurement_interval" 
+                               value="{{ current_interval }}" 
+                               min="1" 
+                               max="300" 
+                               required>
+                        <div class="form-text">
+                            How often devices generate new measurement data (1-300 seconds)
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-save me-1"></i>Update Settings
+                    </button>
+                </form>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        Current: {{ current_interval }}s interval<br>
+                        Note: Changes apply to newly started devices
+                    </small>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Device List -->

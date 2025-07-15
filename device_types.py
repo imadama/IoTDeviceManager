@@ -64,9 +64,14 @@ class DeviceTypeInterface(ABC):
                 previous_kwh = float(measurements[0].get('kwh', 0))
             
             # Calculate energy consumed in this interval
-            # Assuming 5-second intervals between measurements
-            interval_minutes = 5 / 60  # 5 seconds = 1/12 minute
-            interval_hours = interval_minutes / 60  # Convert to hours
+            # Get interval from device settings or default to 5 seconds
+            try:
+                from device_settings import device_settings
+                interval_seconds = device_settings.get_measurement_interval()
+            except:
+                interval_seconds = 5  # Fallback to 5 seconds
+                
+            interval_hours = interval_seconds / 3600  # Convert to hours
             
             # Energy = Power × Time (kWh = kW × hours)
             power_kw = current_power / 1000  # Convert watts to kilowatts

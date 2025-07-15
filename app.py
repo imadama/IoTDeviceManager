@@ -54,6 +54,10 @@ def dashboard():
     from device_types import device_type_registry
     device_types = device_type_registry.get_all_type_names()
     
+    # Get current measurement interval setting
+    from device_settings import device_settings
+    current_interval = device_settings.get_measurement_interval()
+    
     # Create device type info mapping for template
     device_type_info_map = {}
     for type_name in device_types:
@@ -66,7 +70,8 @@ def dashboard():
     return render_template('dashboard.html', 
                          devices=devices, 
                          device_types=device_types,
-                         device_type_info_map=device_type_info_map)
+                         device_type_info_map=device_type_info_map,
+                         current_interval=current_interval)
 
 @app.route('/add_device', methods=['POST'])
 def add_device():
@@ -149,6 +154,33 @@ def delete_device(device_id):
     except Exception as e:
         flash(f'Error deleting device: {str(e)}', 'error')
         logging.error(f"Error deleting device {device_id}: {e}")
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/update_settings', methods=['POST'])
+def update_settings():
+    """Update measurement settings"""
+    try:
+        measurement_interval = int(request.form.get('measurement_interval', 5))
+        
+        # Validate interval
+        if measurement_interval < 1:
+            measurement_interval = 1
+        elif measurement_interval > 300:
+            measurement_interval = 300
+        
+        # Update settings
+        from device_settings import device_settings
+        device_settings.set_measurement_interval(measurement_interval)
+        
+        flash(f'Measurement interval updated to {measurement_interval} seconds', 'success')
+        logging.info(f"Measurement interval updated to {measurement_interval}s")
+        
+    except ValueError:
+        flash('Invalid interval value. Please enter a number between 1 and 300.', 'error')
+    except Exception as e:
+        flash(f'Error updating settings: {str(e)}', 'error')
+        logging.error(f"Error updating settings: {e}")
     
     return redirect(url_for('dashboard'))
 
