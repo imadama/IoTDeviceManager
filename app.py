@@ -367,6 +367,40 @@ def send_mqtt_test():
     
     return redirect(url_for('dashboard'))
 
+@app.route('/reset_cumulocity_registration/<device_id>')
+def reset_cumulocity_registration(device_id):
+    """Reset Cumulocity registration status for a device"""
+    try:
+        # Remove registration flag from device status
+        import json
+        import os
+        
+        status_file = 'device_status.json'
+        if os.path.exists(status_file):
+            with open(status_file, 'r') as f:
+                status_data = json.load(f)
+            
+            devices = status_data.get('devices', {})
+            if device_id in devices:
+                devices[device_id].pop('cumulocity_registered', None)
+                devices[device_id].pop('cumulocity_registered_at', None)
+                
+                with open(status_file, 'w') as f:
+                    json.dump(status_data, f, indent=2)
+                
+                flash(f'Reset Cumulocity registration for device {device_id}. Device will re-register on next start.', 'success')
+                logging.info(f"Reset Cumulocity registration for device {device_id}")
+            else:
+                flash(f'Device {device_id} not found', 'error')
+        else:
+            flash('No device status file found', 'error')
+            
+    except Exception as e:
+        flash(f'Error resetting registration: {str(e)}', 'error')
+        logging.error(f"Error resetting registration for {device_id}: {e}")
+    
+    return redirect(url_for('dashboard'))
+
 @app.route('/api/mqtt_devices')
 def api_mqtt_devices():
     """API endpoint to get MQTT connected devices"""

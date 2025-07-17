@@ -137,9 +137,19 @@ class CumulocityMqttClient:
             'device_id': self.device_id
         }
     
-    def register_device(self, device_type: str, device_name: str) -> bool:
+    def register_device(self, device_type: str, device_name: str, force_register: bool = False) -> bool:
         """Register device with Cumulocity using proper device bootstrap"""
         try:
+            # Check if device is already registered (unless forced)
+            if not force_register and self._is_device_registered():
+                self.logger.info(f"Device '{self.device_id}' already registered in Cumulocity - skipping registration")
+                self.registered = True
+                
+                # Still subscribe to commands
+                self.client.subscribe("s/ds")
+                self.logger.info("Subscribed to device commands topic (s/ds)")
+                return True
+            
             # Subscribe to device commands first
             self.client.subscribe("s/ds")
             self.logger.info("Subscribed to device commands topic (s/ds)")
@@ -152,8 +162,11 @@ class CumulocityMqttClient:
             result.wait_for_publish()
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                self.logger.info(f"✓ Device '{self.device_id}' registered in Cumulocity as '{device_name}'")
+                self.logger.info(f"✓ Device '{self.device_id}' registered in Cumulocity as '{device_name}' (FIRST TIME)")
                 self.registered = True
+                
+                # Mark device as registered in persistent storage
+                self._mark_device_registered()
                 
                 # Send device hardware info (110 template)
                 hardware_msg = f"110,{self.device_id},IoT Simulator Model,v1.0"
@@ -174,6 +187,58 @@ class CumulocityMqttClient:
         except Exception as e:
             self.logger.error(f"Error registering device: {e}")
             return False
+    
+    def _is_device_registered(self) -> bool:
+        """Check if device is already registered in Cumulocity"""
+        try:
+            import json
+            import os
+            
+            status_file = 'device_status.json'
+            if not os.path.exists(status_file):
+                return False
+                
+            with open(status_file, 'r') as f:
+                status_data = json.load(f)
+            
+            devices = status_data.get('devices', {})
+            device_info = devices.get(self.device_id, {})
+            
+            return device_info.get('cumulocity_registered', False)
+            
+        except Exception as e:
+            self.logger.warning(f"Could not check registration status: {e}")
+            return False
+    
+    def _mark_device_registered(self):
+        """Mark device as registered in persistent storage"""
+        try:
+            import json
+            import os
+            
+            status_file = 'device_status.json'
+            status_data = {}
+            
+            if os.path.exists(status_file):
+                with open(status_file, 'r') as f:
+                    status_data = json.load(f)
+            
+            if 'devices' not in status_data:
+                status_data['devices'] = {}
+                
+            if self.device_id not in status_data['devices']:
+                status_data['devices'][self.device_id] = {}
+            
+            status_data['devices'][self.device_id]['cumulocity_registered'] = True
+            status_data['devices'][self.device_id]['cumulocity_registered_at'] = datetime.now().isoformat()
+            
+            with open(status_file, 'w') as f:
+                json.dump(status_data, f, indent=2)
+                
+            self.logger.info(f"Marked device {self.device_id} as registered in Cumulocity")
+            
+        except Exception as e:
+            self.logger.warning(f"Could not mark device as registered: {e}")
     
     def send_measurement(self, measurement_data: Dict[str, Any]) -> bool:
         """

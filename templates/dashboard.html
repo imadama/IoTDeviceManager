@@ -302,6 +302,14 @@
                                                onclick="return confirm('Are you sure you want to delete {{ device.device_id }}? This will also delete all measurement data.')">
                                                 <i class="fas fa-trash me-1"></i>Delete
                                             </a>
+                                            {% if mqtt_enabled %}
+                                            <a href="{{ url_for('reset_cumulocity_registration', device_id=device.device_id) }}" 
+                                               class="btn btn-outline-warning btn-sm"
+                                               title="Reset Cumulocity registration - device will re-register on next start"
+                                               onclick="return confirm('Reset Cumulocity registration for {{ device.device_id }}? Device will re-register when restarted.')">
+                                                <i class="fas fa-redo me-1"></i>Reset MQTT
+                                            </a>
+                                            {% endif %}
                                         </div>
                                     </td>
                                 </tr>
