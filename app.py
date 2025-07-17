@@ -383,6 +383,7 @@ def reset_cumulocity_registration(device_id):
             devices = status_data.get('devices', {})
             if device_id in devices:
                 devices[device_id].pop('cumulocity_registered', None)
+                devices[device_id].pop('cumulocity_device_name', None)
                 devices[device_id].pop('cumulocity_registered_at', None)
                 
                 with open(status_file, 'w') as f:

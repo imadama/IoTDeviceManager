@@ -141,14 +141,18 @@ class CumulocityMqttClient:
         """Register device with Cumulocity using proper device bootstrap"""
         try:
             # Check if device is already registered (unless forced)
-            if not force_register and self._is_device_registered():
-                self.logger.info(f"✓ Device '{self.device_id}' already registered in Cumulocity - skipping registration")
-                self.registered = True
-                
-                # Still subscribe to commands
-                self.client.subscribe("s/ds")
-                self.logger.info("Subscribed to device commands topic (s/ds)")
-                return True
+            if not force_register:
+                reg_status = self._get_registration_status()
+                if reg_status['is_registered']:
+                    self.logger.info(f"✓ Device '{self.device_id}' already registered in Cumulocity as '{reg_status['device_name']}' - skipping registration")
+                    self.registered = True
+                    
+                    # Still subscribe to commands
+                    self.client.subscribe("s/ds")
+                    self.logger.info("Subscribed to device commands topic (s/ds)")
+                    return True
+                else:
+                    self.logger.info(f"Device '{self.device_id}' not yet registered - proceeding with registration")
             
             # Subscribe to device commands first
             self.client.subscribe("s/ds")
@@ -166,7 +170,7 @@ class CumulocityMqttClient:
                 self.registered = True
                 
                 # Mark device as registered in persistent storage
-                self._mark_device_registered()
+                self._mark_device_registered(device_name)
                 
                 # Send device hardware info (110 template)
                 hardware_msg = f"110,{self.device_id},IoT Simulator Model,v1.0"
@@ -188,15 +192,16 @@ class CumulocityMqttClient:
             self.logger.error(f"Error registering device: {e}")
             return False
     
-    def _is_device_registered(self) -> bool:
-        """Check if device is already registered in Cumulocity"""
+    def _get_registration_status(self) -> dict:
+        """Get detailed registration status for device"""
         try:
             import json
             import os
             
             status_file = 'device_status.json'
             if not os.path.exists(status_file):
-                return False
+                self.logger.debug(f"No status file found - device {self.device_id} not registered")
+                return {'is_registered': False, 'device_name': None, 'registered_at': None}
                 
             with open(status_file, 'r') as f:
                 status_data = json.load(f)
@@ -205,19 +210,27 @@ class CumulocityMqttClient:
             device_info = devices.get(self.device_id, {})
             
             is_registered = device_info.get('cumulocity_registered', False)
+            device_name = device_info.get('cumulocity_device_name', None)
+            registered_at = device_info.get('cumulocity_registered_at', None)
+            
+            result = {
+                'is_registered': is_registered,
+                'device_name': device_name,
+                'registered_at': registered_at
+            }
             
             if is_registered:
-                self.logger.debug(f"Device {self.device_id} found in registration cache as registered")
+                self.logger.debug(f"Device {self.device_id} found in registration cache as '{device_name}' (registered: {registered_at})")
             else:
                 self.logger.debug(f"Device {self.device_id} not found in registration cache or not registered")
             
-            return is_registered
+            return result
             
         except Exception as e:
             self.logger.warning(f"Could not check registration status: {e}")
-            return False
+            return {'is_registered': False, 'device_name': None, 'registered_at': None}
     
-    def _mark_device_registered(self):
+    def _mark_device_registered(self, device_name: str):
         """Mark device as registered in persistent storage"""
         try:
             import json
@@ -237,12 +250,13 @@ class CumulocityMqttClient:
                 status_data['devices'][self.device_id] = {}
             
             status_data['devices'][self.device_id]['cumulocity_registered'] = True
+            status_data['devices'][self.device_id]['cumulocity_device_name'] = device_name
             status_data['devices'][self.device_id]['cumulocity_registered_at'] = datetime.now().isoformat()
             
             with open(status_file, 'w') as f:
                 json.dump(status_data, f, indent=2)
                 
-            self.logger.info(f"Marked device {self.device_id} as registered in Cumulocity")
+            self.logger.info(f"Marked device {self.device_id} as registered in Cumulocity with name '{device_name}'")
             
         except Exception as e:
             self.logger.warning(f"Could not mark device as registered: {e}")
