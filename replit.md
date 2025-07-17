@@ -46,7 +46,7 @@ Preferred communication style: Simple, everyday language.
 
 ### MQTT Integration Features
 - **Device Registration**: Complete Cumulocity device bootstrap with hardware info and supported operations
-- **Real-time Measurements**: Combined c8y_Measurement format (200,c8y_Measurement,timestamp,voltage,V,current,A,power,W)
+- **Real-time Measurements**: JSON format via MQTT with proper c8y_ElectricMeasurement fragment structure
 - **Command Handling**: Device restart commands (510) with proper acknowledgment (501/503)
 - **Device Metadata**: Hardware information (110) and supported operations (114) templates
 - **Test Messaging**: Custom topic and message testing with wildcard validation

@@ -1,32 +1,17 @@
 {
   "counters": {
-    "pv": 4,
+    "pv": 5,
     "heatpump": 2,
     "maingrid": 0
   },
   "devices": {
-    "pv001": {
+    "pv005": {
       "device_type": "PV",
       "status": "active",
-      "created_at": "2025-07-15T10:35:46.923650",
+      "created_at": "2025-07-17T11:59:55.969265",
       "cumulocity_registered": true,
-      "cumulocity_device_name": "iot_sim_pv001",
-      "cumulocity_registered_at": "2025-07-17T10:08:29.848463"
-    },
-    "heatpump002": {
-      "device_type": "Heat Pump",
-      "status": "active",
-      "created_at": "2025-07-17T09:06:41.466709"
-    },
-    "pv003": {
-      "device_type": "PV",
-      "status": "stopped",
-      "created_at": "2025-07-17T09:06:58.924262"
-    },
-    "pv004": {
-      "device_type": "PV",
-      "status": "stopped",
-      "created_at": "2025-07-17T09:07:02.700930"
+      "cumulocity_device_name": "iot_sim_pv005",
+      "cumulocity_registered_at": "2025-07-17T12:03:32.330215"
     }
   }
 }

@@ -263,10 +263,18 @@ class CumulocityMqttClient:
     
     def send_measurement(self, measurement_data: Dict[str, Any]) -> bool:
         """
-        Send measurement data to Cumulocity using c8y_Measurement format
+        Send measurement data to Cumulocity using proper JSON format
         
-        Cumulocity c8y_Measurement format:
-        200,c8y_Measurement,<timestamp>,<voltage>,V,<current>,A,<power>,W
+        Cumulocity requires JSON structure with proper fragment format:
+        {
+          "type": "c8y_ElectricMeasurement", 
+          "time": "ISO-timestamp",
+          "c8y_ElectricMeasurement": {
+            "voltage": {"value": X, "unit": "V"},
+            "current": {"value": Y, "unit": "A"}, 
+            "power": {"value": Z, "unit": "W"}
+          }
+        }
         """
         try:
             if not self.connected:
@@ -276,23 +284,45 @@ class CumulocityMqttClient:
             timestamp = measurement_data.get('timestamp', datetime.now().isoformat())
             device_id = measurement_data.get('device_id', self.device_id)
             
-            # Send single combined measurement using c8y_Measurement format
-            payload = f"200,c8y_Measurement,{timestamp},{measurement_data['voltage']},V,{measurement_data['current']},A,{measurement_data['power']},W"
+            # Create proper JSON measurement payload for Cumulocity
+            import json
+            payload = {
+                "type": "c8y_ElectricMeasurement",
+                "time": timestamp,
+                "c8y_ElectricMeasurement": {
+                    "voltage": {
+                        "value": measurement_data['voltage'],
+                        "unit": "V"
+                    },
+                    "current": {
+                        "value": measurement_data['current'], 
+                        "unit": "A"
+                    },
+                    "power": {
+                        "value": measurement_data['power'],
+                        "unit": "W"
+                    }
+                }
+            }
             
-            result = self.client.publish(self.measurement_topic, payload)
+            json_payload = json.dumps(payload)
+            
+            # Publish to JSON measurement topic instead of SmartREST
+            json_topic = f"measurement/measurements/create"
+            result = self.client.publish(json_topic, json_payload)
             
             if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 self.last_message_time = datetime.now()
-                self.logger.info(f"📊 Device '{device_id}' sent c8y_Measurement to Cumulocity successfully")
+                self.logger.info(f"📊 Device '{device_id}' sent JSON measurement to Cumulocity successfully")
                 self.logger.info(f"   ⚡ Voltage: {measurement_data['voltage']}V, Current: {measurement_data['current']}A, Power: {measurement_data['power']}W")
-                self.logger.debug(f"   📡 Payload: {payload}")
+                self.logger.debug(f"   📡 JSON Payload: {json_payload}")
                 return True
             else:
-                self.logger.error(f"Failed to publish c8y_Measurement: {result.rc}")
+                self.logger.error(f"Failed to publish JSON measurement: {result.rc}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error sending c8y_Measurement: {e}")
+            self.logger.error(f"Error sending JSON measurement: {e}")
             return False
     
     def send_alarm(self, alarm_type: str, alarm_text: str, severity: str = "MINOR") -> bool:
