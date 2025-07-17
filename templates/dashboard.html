@@ -264,11 +264,11 @@
                                     </td>
                                     <td>
                                         {% if device.status == 'active' %}
-                                            <span class="badge bg-success">
+                                            <span id="status-{{ device.device_id }}" class="badge bg-success">
                                                 <i class="fas fa-play me-1"></i>Actief
                                             </span>
                                         {% else %}
-                                            <span class="badge bg-secondary">
+                                            <span id="status-{{ device.device_id }}" class="badge bg-secondary">
                                                 <i class="fas fa-stop me-1"></i>Gestopt
                                             </span>
                                         {% endif %}

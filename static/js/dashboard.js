@@ -25,10 +25,12 @@ function updateDeviceStatus() {
     fetch('/device_status_api')
         .then(response => response.json())
         .then(data => {
-            console.log('Checking for device status updates...');
+            console.log('Checking for device status updates...', data);
             
             if (data.status === 'success' && data.devices) {
                 data.devices.forEach(device => {
+                    console.log(`Device ${device.id}: status=${device.status}, alive=${device.is_process_alive}`);
+                    
                     // Update device status badges
                     updateDeviceStatusBadge(device.id, device.status, device.is_process_alive);
                     
@@ -47,20 +49,21 @@ function updateDeviceStatus() {
 
 function updateDeviceStatusBadge(deviceId, status, isProcessAlive) {
     const statusElement = document.querySelector(`#status-${deviceId}`);
+    console.log(`Updating badge for ${deviceId}: element found=${!!statusElement}`);
     if (statusElement) {
         // Clear existing classes
         statusElement.className = 'badge';
         
         if (status === 'active' && isProcessAlive) {
             statusElement.classList.add('bg-success');
-            statusElement.innerHTML = '<i class="fas fa-play me-1"></i>Active';
+            statusElement.innerHTML = '<i class="fas fa-play me-1"></i>Actief';
         } else if (status === 'active' && !isProcessAlive) {
             // Process should be active but isn't - show warning
             statusElement.classList.add('bg-warning', 'text-dark');
-            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Starting...';
+            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Opstart...';
         } else {
             statusElement.classList.add('bg-secondary');
-            statusElement.innerHTML = '<i class="fas fa-stop me-1"></i>Stopped';
+            statusElement.innerHTML = '<i class="fas fa-stop me-1"></i>Gestopt';
         }
     }
     
