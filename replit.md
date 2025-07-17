@@ -46,12 +46,13 @@ Preferred communication style: Simple, everyday language.
 
 ### MQTT Integration Features
 - **Device Registration**: Complete Cumulocity device bootstrap with hardware info and supported operations
-- **Real-time Measurements**: Voltage, current, power, and kWh data via static templates (200 series)
+- **Real-time Measurements**: Combined c8y_Measurement format (200,c8y_Measurement,timestamp,voltage,V,current,A,power,W)
 - **Command Handling**: Device restart commands (510) with proper acknowledgment (501/503)
 - **Device Metadata**: Hardware information (110) and supported operations (114) templates
 - **Test Messaging**: Custom topic and message testing with wildcard validation
 - **SSL/TLS Security**: Production-ready secure connections with tenant/username authentication
 - **Error Handling**: Comprehensive connection, authentication, and message validation
+- **Optimized Data Format**: Single payload per measurement cycle instead of multiple separate messages
 
 ### Device Types Supported
 - **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)

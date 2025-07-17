@@ -263,10 +263,10 @@ class CumulocityMqttClient:
     
     def send_measurement(self, measurement_data: Dict[str, Any]) -> bool:
         """
-        Send measurement data to Cumulocity using static templates
+        Send measurement data to Cumulocity using c8y_Measurement format
         
-        Cumulocity static template format for measurements:
-        200,<measurement_type>,<value>,<unit>,<timestamp>
+        Cumulocity c8y_Measurement format:
+        200,c8y_Measurement,<timestamp>,<voltage>,V,<current>,A,<power>,W
         """
         try:
             if not self.connected:
@@ -276,34 +276,23 @@ class CumulocityMqttClient:
             timestamp = measurement_data.get('timestamp', datetime.now().isoformat())
             device_id = measurement_data.get('device_id', self.device_id)
             
-            # Send measurements using Cumulocity static templates
-            # Using template 211 for temperature-like measurements and custom templates
-            measurements = [
-                f"200,c8y_Voltage,{measurement_data['voltage']},V,{timestamp}",
-                f"200,c8y_Current,{measurement_data['current']},A,{timestamp}",
-                f"200,c8y_Power,{measurement_data['power']},W,{timestamp}",
-                f"200,c8y_EnergyConsumption,{measurement_data['kwh']},kWh,{timestamp}"
-            ]
+            # Send single combined measurement using c8y_Measurement format
+            payload = f"200,c8y_Measurement,{timestamp},{measurement_data['voltage']},V,{measurement_data['current']},A,{measurement_data['power']},W"
             
-            success_count = 0
-            for measurement in measurements:
-                result = self.client.publish(self.measurement_topic, measurement)
-                if result.rc == mqtt.MQTT_ERR_SUCCESS:
-                    success_count += 1
-                else:
-                    self.logger.error(f"Failed to publish measurement: {measurement}")
+            result = self.client.publish(self.measurement_topic, payload)
             
-            if success_count > 0:
+            if result.rc == mqtt.MQTT_ERR_SUCCESS:
                 self.last_message_time = datetime.now()
-                self.logger.info(f"📊 Device '{device_id}' sent {success_count}/{len(measurements)} measurements to Cumulocity successfully")
+                self.logger.info(f"📊 Device '{device_id}' sent c8y_Measurement to Cumulocity successfully")
                 self.logger.info(f"   ⚡ Voltage: {measurement_data['voltage']}V, Current: {measurement_data['current']}A, Power: {measurement_data['power']}W")
+                self.logger.debug(f"   📡 Payload: {payload}")
                 return True
             else:
-                self.logger.error("Failed to send any measurements")
+                self.logger.error(f"Failed to publish c8y_Measurement: {result.rc}")
                 return False
                 
         except Exception as e:
-            self.logger.error(f"Error sending measurement: {e}")
+            self.logger.error(f"Error sending c8y_Measurement: {e}")
             return False
     
     def send_alarm(self, alarm_type: str, alarm_text: str, severity: str = "MINOR") -> bool:

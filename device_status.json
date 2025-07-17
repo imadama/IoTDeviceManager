@@ -7,16 +7,16 @@
   "devices": {
     "pv001": {
       "device_type": "PV",
-      "status": "stopped",
-      "created_at": "2025-07-15T10:35:46.923650"
+      "status": "active",
+      "created_at": "2025-07-15T10:35:46.923650",
+      "cumulocity_registered": true,
+      "cumulocity_device_name": "iot_sim_pv001",
+      "cumulocity_registered_at": "2025-07-17T10:08:29.848463"
     },
     "heatpump002": {
       "device_type": "Heat Pump",
       "status": "active",
-      "created_at": "2025-07-17T09:06:41.466709",
-      "cumulocity_registered": true,
-      "cumulocity_device_name": "iot_sim_heatpump002",
-      "cumulocity_registered_at": "2025-07-17T09:22:49.776212"
+      "created_at": "2025-07-17T09:06:41.466709"
     },
     "pv003": {
       "device_type": "PV",
