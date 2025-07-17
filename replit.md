@@ -52,7 +52,8 @@ Preferred communication style: Simple, everyday language.
 - **Test Messaging**: Custom topic and message testing with wildcard validation
 - **SSL/TLS Security**: Production-ready secure connections with tenant/username authentication
 - **Error Handling**: Comprehensive connection, authentication, and message validation
-- **Optimized Data Format**: Single payload per measurement cycle instead of multiple separate messages
+- **Optimized Data Format**: Single JSON payload per measurement cycle with proper c8y fragment structure
+- **Rate Limiting Handling**: Cumulocity MQTT rate limits handled automatically via queue mechanism
 
 ### Device Types Supported
 - **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)

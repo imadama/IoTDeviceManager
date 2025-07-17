@@ -315,10 +315,11 @@ class CumulocityMqttClient:
                 self.last_message_time = datetime.now()
                 self.logger.info(f"📊 Device '{device_id}' sent JSON measurement to Cumulocity successfully")
                 self.logger.info(f"   ⚡ Voltage: {measurement_data['voltage']}V, Current: {measurement_data['current']}A, Power: {measurement_data['power']}W")
+                self.logger.debug(f"   📡 JSON Topic: {json_topic}")
                 self.logger.debug(f"   📡 JSON Payload: {json_payload}")
                 return True
             else:
-                self.logger.error(f"Failed to publish JSON measurement: {result.rc}")
+                self.logger.error(f"Failed to publish JSON measurement to {json_topic}: {result.rc}")
                 return False
                 
         except Exception as e:
