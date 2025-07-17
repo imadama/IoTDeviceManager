@@ -77,15 +77,21 @@ class DeviceManager:
                 self.logger.error(f"Error loading device status: {e}")
                 
     def _save_device_status(self):
-        """Save device status to JSON file"""
+        """Save device status to JSON file with real-time process status"""
         try:
             devices_status = {}
             
-            # Save all devices from device_statuses
+            # Save all devices from device_statuses, but sync with real process status
             for device_id, device_status in self.device_statuses.items():
+                # Check real process status
+                real_status = self._get_real_device_status(device_id)
+                
+                # Update device_status object to match reality
+                device_status.status = real_status
+                
                 devices_status[device_id] = {
                     'device_type': device_status.device_type,
-                    'status': device_status.status,
+                    'status': real_status,
                     'created_at': device_status.created_at
                 }
             
@@ -100,6 +106,19 @@ class DeviceManager:
             self.logger.debug(f"Saved device status to {self.status_file}")
         except Exception as e:
             self.logger.error(f"Error saving device status: {e}")
+            
+    def _get_real_device_status(self, device_id):
+        """Get the real-time status of a device by checking the actual process"""
+        if device_id in self.devices:
+            process = self.devices[device_id]
+            if process.is_alive():
+                return 'active'
+            else:
+                # Process exists but is dead - clean it up
+                self.logger.warning(f"Found dead process for {device_id}, cleaning up")
+                del self.devices[device_id]
+                return 'stopped'
+        return 'stopped'
             
     def _get_device_type_from_id(self, device_id):
         """Extract device type from device ID using registry"""
@@ -141,9 +160,15 @@ class DeviceManager:
         
     def start_device(self, device_id):
         """Start a device process"""
-        if device_id in self.devices and self.devices[device_id].is_alive():
-            self.logger.warning(f"Device {device_id} is already running")
-            return False
+        # Clean up any dead processes first
+        if device_id in self.devices:
+            if self.devices[device_id].is_alive():
+                self.logger.warning(f"Device {device_id} is already running")
+                return False
+            else:
+                # Process exists but is dead - clean it up
+                self.logger.info(f"Cleaning up dead process for {device_id}")
+                del self.devices[device_id]
             
         try:
             device_type = self._get_device_type_from_id(device_id)
@@ -156,6 +181,10 @@ class DeviceManager:
             process.start()
             
             self.devices[device_id] = process
+            
+            # Update device_statuses to reflect new state
+            if device_id in self.device_statuses:
+                self.device_statuses[device_id].status = 'active'
             
             # Update status in PostgreSQL if available
             if hasattr(self.db, 'save_device_config'):
@@ -208,6 +237,10 @@ class DeviceManager:
                     
             # Remove from active devices
             del self.devices[device_id]
+            
+            # Update device_statuses to reflect new state
+            if device_id in self.device_statuses:
+                self.device_statuses[device_id].status = 'stopped'
             
             # Update status in PostgreSQL if available
             if hasattr(self.db, 'save_device_config'):

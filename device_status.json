@@ -1,6 +1,6 @@
 {
   "counters": {
-    "pv": 2,
+    "pv": 4,
     "heatpump": 1,
     "maingrid": 0
   },
@@ -9,6 +9,19 @@
       "device_type": "PV",
       "status": "stopped",
       "created_at": "2025-07-15T10:35:46.923650"
+    },
+    "pv003": {
+      "device_type": "PV",
+      "status": "active",
+      "created_at": "2025-07-17T09:06:58.924262"
+    },
+    "pv004": {
+      "device_type": "PV",
+      "status": "stopped",
+      "created_at": "2025-07-17T09:07:02.700930",
+      "cumulocity_registered": true,
+      "cumulocity_device_name": "iot_sim_pv004",
+      "cumulocity_registered_at": "2025-07-17T09:07:30.463561"
     }
   }
 }

@@ -402,6 +402,54 @@ def reset_cumulocity_registration(device_id):
     
     return redirect(url_for('dashboard'))
 
+@app.route('/device_status_api')
+def device_status_api():
+    """API endpoint for real-time device status updates"""
+    try:
+        devices = device_manager.get_all_devices()
+        device_list = []
+        
+        for device in devices:
+            # Force real-time status check
+            real_status = device_manager._get_real_device_status(device.device_id)
+            
+            device_list.append({
+                'id': device.device_id,
+                'type': device.device_type,
+                'status': real_status,  # Use real-time status
+                'created_at': device.created_at,
+                'is_process_alive': device.device_id in device_manager.devices and device_manager.devices[device.device_id].is_alive()
+            })
+        
+        # Also get MQTT connection statuses for enhanced monitoring
+        mqtt_statuses = {}
+        try:
+            from mqtt_client import mqtt_settings
+            if mqtt_settings.is_enabled():
+                connection_params = mqtt_settings.get_connection_params()
+                mqtt_statuses = {
+                    'enabled': True,
+                    'broker_host': connection_params.get('broker_host', ''),
+                    'connected': bool(connection_params.get('broker_host'))
+                }
+            else:
+                mqtt_statuses = {'enabled': False}
+        except Exception:
+            mqtt_statuses = {'enabled': False}
+        
+        return jsonify({
+            'status': 'success',
+            'devices': device_list,
+            'mqtt_status': mqtt_statuses,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logging.error(f"Error in device status API: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @app.route('/api/mqtt_devices')
 def api_mqtt_devices():
     """API endpoint to get MQTT connected devices"""
@@ -411,10 +459,11 @@ def api_mqtt_devices():
         if not mqtt_settings.is_enabled():
             return jsonify({'connected_devices': [], 'mqtt_enabled': False})
         
-        # Get active devices
+        # Get active devices with real-time status
         active_devices = []
         for device in device_manager.get_all_devices():
-            if device.status == 'active':
+            real_status = device_manager._get_real_device_status(device.device_id)
+            if real_status == 'active':
                 active_devices.append({
                     'device_id': device.device_id,
                     'device_type': device.device_type,

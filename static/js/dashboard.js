@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     
     // Auto-refresh device status every 30 seconds
-    setInterval(updateDeviceStatus, 30000);
+    setInterval(updateDeviceStatus, 15000);
     
     // Update last update time every second
     setInterval(updateLastUpdateTime, 1000);
@@ -22,48 +22,93 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateDeviceStatus() {
-    fetch('/api/device_status')
+    fetch('/device_status_api')
         .then(response => response.json())
         .then(data => {
             console.log('Checking for device status updates...');
             
-            // Update MQTT status indicators
-            if (data.devices) {
+            if (data.status === 'success' && data.devices) {
                 data.devices.forEach(device => {
-                    const mqttElement = document.querySelector(`.mqtt-status-${device.device_id}`);
-                    if (mqttElement) {
-                        const textElement = mqttElement.querySelector('.mqtt-text');
-                        const iconElement = mqttElement.querySelector('i');
-                        
-                        // Update MQTT status display
-                        if (device.mqtt_status === 'connected') {
-                            mqttElement.className = `badge bg-success ms-1 mqtt-status-${device.device_id}`;
-                            iconElement.className = 'fas fa-wifi me-1';
-                            if (textElement) textElement.textContent = 'MQTT ✓';
-                            mqttElement.title = 'MQTT Connected to Cumulocity';
-                        } else if (device.mqtt_status === 'disconnected') {
-                            mqttElement.className = `badge bg-warning ms-1 mqtt-status-${device.device_id}`;
-                            iconElement.className = 'fas fa-wifi me-1';
-                            if (textElement) textElement.textContent = 'MQTT ✗';
-                            mqttElement.title = 'MQTT Disconnected';
-                        } else if (device.mqtt_status === 'disabled') {
-                            mqttElement.className = `badge bg-secondary ms-1 mqtt-status-${device.device_id}`;
-                            iconElement.className = 'fas fa-wifi-slash me-1';
-                            if (textElement) textElement.textContent = 'MQTT Off';
-                            mqttElement.title = 'MQTT Disabled';
-                        } else {
-                            mqttElement.className = `badge bg-info ms-1 mqtt-status-${device.device_id}`;
-                            iconElement.className = 'fas fa-wifi me-1';
-                            if (textElement) textElement.textContent = 'MQTT ?';
-                            mqttElement.title = 'MQTT Status Unknown';
-                        }
-                    }
+                    // Update device status badges
+                    updateDeviceStatusBadge(device.id, device.status, device.is_process_alive);
+                    
+                    // Update MQTT status indicators
+                    updateMqttStatusIndicator(device.id, data.mqtt_status);
                 });
+                
+                // Update last refresh time
+                updateLastUpdateTime();
             }
         })
         .catch(error => {
             console.error('Error fetching device status:', error);
         });
+}
+
+function updateDeviceStatusBadge(deviceId, status, isProcessAlive) {
+    const statusElement = document.querySelector(`#status-${deviceId}`);
+    if (statusElement) {
+        // Clear existing classes
+        statusElement.className = 'badge';
+        
+        if (status === 'active' && isProcessAlive) {
+            statusElement.classList.add('bg-success');
+            statusElement.innerHTML = '<i class="fas fa-play me-1"></i>Active';
+        } else if (status === 'active' && !isProcessAlive) {
+            // Process should be active but isn't - show warning
+            statusElement.classList.add('bg-warning', 'text-dark');
+            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Starting...';
+        } else {
+            statusElement.classList.add('bg-secondary');
+            statusElement.innerHTML = '<i class="fas fa-stop me-1"></i>Stopped';
+        }
+    }
+    
+    // Update action buttons based on real status
+    updateActionButtons(deviceId, status, isProcessAlive);
+}
+
+function updateActionButtons(deviceId, status, isProcessAlive) {
+    const startBtn = document.querySelector(`a[href*="start_device/${deviceId}"]`);
+    const stopBtn = document.querySelector(`a[href*="stop_device/${deviceId}"]`);
+    
+    if (startBtn && stopBtn) {
+        if (status === 'active' && isProcessAlive) {
+            // Device is actually running
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+        } else {
+            // Device is stopped or process is dead
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+        }
+    }
+}
+
+function updateMqttStatusIndicator(deviceId, mqttStatus) {
+    const mqttElement = document.querySelector(`.mqtt-status-${deviceId}`);
+    if (mqttElement) {
+        const textElement = mqttElement.querySelector('.mqtt-text');
+        const iconElement = mqttElement.querySelector('i');
+        
+        // Update MQTT status display based on global MQTT status
+        if (mqttStatus && mqttStatus.enabled && mqttStatus.connected) {
+            mqttElement.className = `badge bg-success ms-1 mqtt-status-${deviceId}`;
+            iconElement.className = 'fas fa-wifi me-1';
+            if (textElement) textElement.textContent = 'MQTT ✓';
+            mqttElement.title = `MQTT Connected to ${mqttStatus.broker_host}`;
+        } else if (mqttStatus && mqttStatus.enabled && !mqttStatus.connected) {
+            mqttElement.className = `badge bg-warning ms-1 mqtt-status-${deviceId}`;
+            iconElement.className = 'fas fa-wifi me-1';
+            if (textElement) textElement.textContent = 'MQTT ✗';
+            mqttElement.title = 'MQTT Enabled but not connected';
+        } else {
+            mqttElement.className = `badge bg-secondary ms-1 mqtt-status-${deviceId}`;
+            iconElement.className = 'fas fa-wifi-slash me-1';
+            if (textElement) textElement.textContent = 'MQTT Off';
+            mqttElement.title = 'MQTT Disabled';
+        }
+    }
 }
 
 function updateLastUpdateTime() {
