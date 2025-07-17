@@ -142,7 +142,7 @@ class CumulocityMqttClient:
         try:
             # Check if device is already registered (unless forced)
             if not force_register and self._is_device_registered():
-                self.logger.info(f"Device '{self.device_id}' already registered in Cumulocity - skipping registration")
+                self.logger.info(f"✓ Device '{self.device_id}' already registered in Cumulocity - skipping registration")
                 self.registered = True
                 
                 # Still subscribe to commands
@@ -204,7 +204,14 @@ class CumulocityMqttClient:
             devices = status_data.get('devices', {})
             device_info = devices.get(self.device_id, {})
             
-            return device_info.get('cumulocity_registered', False)
+            is_registered = device_info.get('cumulocity_registered', False)
+            
+            if is_registered:
+                self.logger.debug(f"Device {self.device_id} found in registration cache as registered")
+            else:
+                self.logger.debug(f"Device {self.device_id} not found in registration cache or not registered")
+            
+            return is_registered
             
         except Exception as e:
             self.logger.warning(f"Could not check registration status: {e}")
