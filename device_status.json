@@ -1,7 +1,7 @@
 {
   "counters": {
     "pv": 4,
-    "heatpump": 1,
+    "heatpump": 2,
     "maingrid": 0
   },
   "devices": {
@@ -9,6 +9,11 @@
       "device_type": "PV",
       "status": "stopped",
       "created_at": "2025-07-15T10:35:46.923650"
+    },
+    "heatpump002": {
+      "device_type": "Heat Pump",
+      "status": "stopped",
+      "created_at": "2025-07-17T09:06:41.466709"
     },
     "pv003": {
       "device_type": "PV",
