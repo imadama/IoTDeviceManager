@@ -16,7 +16,7 @@
       "created_at": "2025-07-17T09:06:41.466709",
       "cumulocity_registered": true,
       "cumulocity_device_name": "iot_sim_heatpump002",
-      "cumulocity_registered_at": "2025-07-17T09:18:54.031358"
+      "cumulocity_registered_at": "2025-07-17T09:22:49.776212"
     },
     "pv003": {
       "device_type": "PV",

@@ -295,7 +295,8 @@ class CumulocityMqttClient:
             
             if success_count > 0:
                 self.last_message_time = datetime.now()
-                self.logger.debug(f"📊 Device '{device_id}' sent {success_count}/{len(measurements)} measurements to Cumulocity")
+                self.logger.info(f"📊 Device '{device_id}' sent {success_count}/{len(measurements)} measurements to Cumulocity successfully")
+                self.logger.info(f"   ⚡ Voltage: {measurement_data['voltage']}V, Current: {measurement_data['current']}A, Power: {measurement_data['power']}W")
                 return True
             else:
                 self.logger.error("Failed to send any measurements")
