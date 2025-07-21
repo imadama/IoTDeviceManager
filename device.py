@@ -86,13 +86,17 @@ def device_worker(device_id, device_type, interval_seconds=None):
         db = Database()
         logger.info(f"Device worker {device_id} using SQLite")
     
-    # Initialize MQTT client if enabled
+    # Initialize MQTT client if enabled - each device gets its own unique client
     mqtt_client = None
     try:
         from mqtt_client import CumulocityMqttClient, mqtt_settings
         if mqtt_settings.is_enabled():
             connection_params = mqtt_settings.get_connection_params()
             if connection_params['broker_host']:
+                # Create unique client ID for this specific device instance
+                unique_client_id = f"iot_sim_{device_id}_client"
+                device_name = f"iot_sim_{device_id}"
+                
                 mqtt_client = CumulocityMqttClient(
                     broker_host=connection_params['broker_host'],
                     broker_port=connection_params['broker_port'],
@@ -100,6 +104,7 @@ def device_worker(device_id, device_type, interval_seconds=None):
                     password=connection_params['password'],
                     tenant=connection_params['tenant'],
                     device_id=device_id,
+                    client_id=unique_client_id,  # Unique client ID per device
                     use_ssl=connection_params['use_ssl'],
                     ca_cert_path=connection_params['ca_cert_path'],
                     client_cert_path=connection_params['client_cert_path'],
@@ -107,9 +112,8 @@ def device_worker(device_id, device_type, interval_seconds=None):
                 )
                 
                 if mqtt_client.connect():
-                    logger.info(f"MQTT enabled for {device_id}")
-                    # Register device with Cumulocity
-                    device_name = f"{mqtt_settings.settings.get('device_prefix', 'iot_sim_')}{device_id}"
+                    logger.info(f"MQTT enabled for {device_id} with client ID: {unique_client_id}")
+                    # Register device with Cumulocity (only once per device)
                     mqtt_client.register_device(device_type, device_name)
                 else:
                     logger.warning(f"Failed to connect to MQTT broker for {device_id}")

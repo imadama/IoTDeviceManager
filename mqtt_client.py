@@ -16,8 +16,9 @@ class CumulocityMqttClient:
     def __init__(self, broker_host: str, broker_port: int = 1883, 
                  username: str = None, password: str = None, 
                  tenant: str = None, device_id: str = None,
-                 use_ssl: bool = False, ca_cert_path: str = None,
-                 client_cert_path: str = None, client_key_path: str = None):
+                 client_id: str = None, use_ssl: bool = False, 
+                 ca_cert_path: str = None, client_cert_path: str = None, 
+                 client_key_path: str = None):
         """
         Initialize Cumulocity MQTT client
         
@@ -39,6 +40,7 @@ class CumulocityMqttClient:
         self.password = password
         self.tenant = tenant
         self.device_id = device_id
+        self.client_id = client_id or f"mqtt_client_{device_id}"  # Unique client ID per device
         self.use_ssl = use_ssl
         self.ca_cert_path = ca_cert_path
         self.client_cert_path = client_cert_path
@@ -58,10 +60,12 @@ class CumulocityMqttClient:
         """Connect to Cumulocity MQTT broker"""
         try:
             # Use MQTT version 3.1.1 for Cumulocity compatibility
+            # Each device gets its own unique client ID (like your example script)
             self.client = mqtt.Client(
-                client_id=f"{self.device_id}_{int(time.time())}", 
+                client_id=self.client_id, 
                 protocol=mqtt.MQTTv311
             )
+            self.logger.info(f"Created MQTT client with unique ID: {self.client_id}")
             
             # Set authentication if provided
             if self.username and self.password:
