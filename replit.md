@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is an IoT Device Management System built with Flask that simulates and manages virtual IoT devices (Solar Panels, Heat Pumps, and Main Grid connections). The system generates synthetic measurement data, stores it in a SQLite database, and provides a web interface for device management and data visualization.
+This is an IoT Device Management System built with Flask that simulates and manages virtual IoT devices (Solar Panels, Heat Pumps, and Main Grid connections). The system generates synthetic measurement data, stores it in a PostgreSQL database, and provides a web interface for device management and data visualization with complete Cumulocity IoT platform integration. Each device operates as an independent script with unique MQTT client connections, preventing duplicate registrations and ensuring proper device isolation.
 
 ## User Preferences
 
@@ -11,12 +11,13 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Backend Architecture
-- **Framework**: Flask web application with Python
-- **Database**: SQLite for measurement data storage and device state persistence
-- **Process Management**: Python multiprocessing for running virtual device simulations
-- **Data Models**: Simple Python classes for DeviceStatus and Measurement entities
+- **Framework**: Flask web application with Python and Gunicorn production server
+- **Database**: PostgreSQL primary database with SQLite fallback for measurement data and device state persistence
+- **Process Management**: Python multiprocessing for running virtual device simulations as independent scripts
+- **Data Models**: SQLAlchemy ORM models for PostgreSQL with fallback Python classes for SQLite
 - **Device Type Abstraction**: Abstract Base Class pattern for extensible device types with DeviceTypeInterface
 - **MQTT Integration**: Cumulocity IoT platform connectivity using paho-mqtt library with MQTT 3.1.1 protocol
+- **Device Isolation**: Each device runs as independent script with unique MQTT client ID (`iot_sim_{device_id}_client`)
 
 ### Frontend Architecture
 - **Template Engine**: Jinja2 templates with Flask
@@ -54,6 +55,9 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Comprehensive connection, authentication, and message validation
 - **Optimized Data Format**: Single JSON payload per measurement cycle with proper c8y fragment structure
 - **Rate Limiting Handling**: Cumulocity MQTT rate limits handled automatically via queue mechanism
+- **Unique Client IDs**: Each device has individual MQTT client (`iot_sim_{device_id}_client`) preventing conflicts
+- **Registration Persistence**: Device registration status stored in `device_status.json` to prevent duplicates
+- **Independent Script Architecture**: Each device behaves like a standalone script with only devicename and clientID differences
 
 ### Device Types Supported
 - **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)
@@ -68,9 +72,11 @@ Preferred communication style: Simple, everyday language.
 ## Data Flow
 
 1. **Device Creation**: User selects device type → DeviceManager creates new device → Status saved to JSON
-2. **Device Operation**: Device process generates measurement data → Data stored in SQLite → Status updated
-3. **Data Visualization**: Web interface queries database → Templates render measurement data → User views results
-4. **Device Management**: User controls (start/stop/delete) → DeviceManager updates processes → Status persisted
+2. **Device Registration**: Each device checks registration status → If not registered, registers once in Cumulocity → Status persisted
+3. **Device Operation**: Independent device process generates measurement data → Data stored in PostgreSQL → MQTT sent to Cumulocity
+4. **Data Visualization**: Web interface queries database → Templates render measurement data → User views results
+5. **Device Management**: User controls (start/stop/delete) → DeviceManager updates processes → Status persisted
+6. **MQTT Communication**: Each device maintains separate MQTT connection with unique client ID → No registration conflicts
 
 ## External Dependencies
 
@@ -96,9 +102,10 @@ Preferred communication style: Simple, everyday language.
 ## Deployment Strategy
 
 ### Development Setup
-- **Entry Point**: `main.py` runs Flask dev server on 0.0.0.0:5000
-- **Debug Mode**: Enabled for development with auto-reload
+- **Entry Point**: `main.py` runs Gunicorn production server on 0.0.0.0:5000
+- **Production Ready**: Gunicorn with reload support for development
 - **File Structure**: Modular Python files with templates and static assets
+- **Environment**: PostgreSQL database with automatic fallback to SQLite
 
 ### Database Initialization
 - **Auto-Setup**: Database tables created automatically on first run
@@ -115,4 +122,19 @@ Preferred communication style: Simple, everyday language.
 - **JavaScript**: Custom dashboard functionality in static/js/
 - **CSS**: Bootstrap loaded from CDN for styling
 
-The system is designed for development and demonstration purposes, simulating IoT device behavior without requiring actual hardware. The architecture supports easy extension for additional device types and measurement parameters.
+## Recent Changes (July 2025)
+
+### Unique MQTT Client Architecture Implementation
+- **Date**: July 21-24, 2025
+- **Issue Resolved**: Devices were sharing MQTT client instances causing registration conflicts
+- **Solution Implemented**: Each device now has unique MQTT client ID (`iot_sim_{device_id}_client`)
+- **Architecture Change**: Devices now behave as completely independent scripts, matching user requirements
+- **Registration Logic**: Persistent storage prevents duplicate device registrations in Cumulocity
+- **Testing Confirmed**: Multiple devices (test002, test003) running simultaneously with separate MQTT connections
+
+### Database Migration to PostgreSQL
+- **Primary Database**: PostgreSQL with proper schema and indexing
+- **Fallback Support**: SQLite database maintained for environments without PostgreSQL
+- **ORM Integration**: SQLAlchemy models for PostgreSQL with proper relationships
+
+The system is designed for production IoT device simulation and management, providing realistic device behavior without requiring actual hardware. The architecture supports easy extension for additional device types and measurement parameters while maintaining proper device isolation and Cumulocity integration standards.
