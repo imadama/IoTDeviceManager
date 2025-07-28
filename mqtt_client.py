@@ -114,6 +114,10 @@ class CumulocityMqttClient:
             while not self.connected and timeout > 0:
                 time.sleep(0.5)
                 timeout -= 0.5
+            
+            if not self.connected:
+                self.logger.error(f"Failed to connect to MQTT broker within {10} seconds")
+                return False
                 
             return self.connected
             

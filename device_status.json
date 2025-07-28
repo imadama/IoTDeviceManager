@@ -7,11 +7,8 @@
   "devices": {
     "pv006": {
       "device_type": "PV",
-      "status": "active",
-      "created_at": "2025-07-21T14:43:22.468299",
-      "cumulocity_registered": true,
-      "cumulocity_device_name": "iot_sim_pv006",
-      "cumulocity_registered_at": "2025-07-21T15:03:29.364836"
+      "status": "stopped",
+      "created_at": "2025-07-21T14:43:22.468299"
     }
   }
 }

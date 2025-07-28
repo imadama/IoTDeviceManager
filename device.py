@@ -148,7 +148,24 @@ def device_worker(device_id, device_type, interval_seconds=None):
             
             # Send to MQTT if enabled and connected
             if mqtt_client and mqtt_client.connected:
-                mqtt_client.send_measurement(data)
+                success = mqtt_client.send_measurement(data)
+                if not success:
+                    logger.warning(f"Failed to send MQTT measurement for {device_id}")
+                    # Try to reconnect on failure
+                    logger.info(f"Attempting to reconnect MQTT for {device_id}")
+                    if mqtt_client.connect():
+                        logger.info(f"Successfully reconnected MQTT for {device_id}")
+                    else:
+                        logger.error(f"Failed to reconnect MQTT for {device_id}")
+            elif mqtt_client and not mqtt_client.connected:
+                logger.warning(f"MQTT client for {device_id} is not connected, attempting reconnection")
+                if mqtt_client.connect():
+                    logger.info(f"Successfully reconnected MQTT for {device_id}")
+                    mqtt_client.send_measurement(data)
+                else:
+                    logger.error(f"Failed to reconnect MQTT for {device_id}")
+            elif mqtt_client is None:
+                logger.error(f"MQTT client is None for {device_id}")
             
             logger.debug(f"Generated data for {device_id}: {data}")
             
