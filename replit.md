@@ -37,13 +37,17 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Core Application Components
+- **main.py**: Entry point for Gunicorn production server
 - **app.py**: Main Flask application with routes for dashboard and device management
 - **device_manager.py**: Manages virtual device lifecycle and process orchestration using abstracted device types
-- **device.py**: Virtual device implementation with abstracted data generation logic
+- **device.py**: Virtual device implementation with abstracted data generation logic and unique MQTT client support
 - **device_types.py**: Abstract device type implementations with DeviceTypeInterface, registry pattern for extensibility
-- **database.py**: SQLite database wrapper with connection management
-- **models.py**: Data models for DeviceStatus and Measurement entities
-- **mqtt_client.py**: Cumulocity MQTT client with SSL/TLS, certificate auth, MQTT 3.1.1 protocol, and test messaging
+- **database.py**: SQLite database wrapper with connection management (fallback)
+- **database_postgres.py**: PostgreSQL database wrapper with SQLAlchemy ORM
+- **models.py**: SQLite data models for DeviceStatus and Measurement entities (fallback)
+- **models_postgres.py**: PostgreSQL SQLAlchemy models for production database
+- **mqtt_client.py**: Cumulocity MQTT client with unique client IDs, SSL/TLS, certificate auth, MQTT 3.1.1 protocol
+- **device_settings.py**: Device configuration management and measurement intervals
 
 ### MQTT Integration Features
 - **Device Registration**: Complete Cumulocity device bootstrap with hardware info and supported operations
@@ -83,21 +87,24 @@ Preferred communication style: Simple, everyday language.
 ### Python Packages
 - **Flask**: Web framework for HTTP handling and template rendering
 - **Flask-SQLAlchemy**: ORM for database operations with PostgreSQL
+- **Gunicorn**: Production WSGI server for Flask application
 - **psycopg2-binary**: PostgreSQL adapter for Python
 - **paho-mqtt**: MQTT client library for Cumulocity IoT platform connectivity
+- **email-validator**: Email validation support for Flask forms
 - **sqlite3**: Database operations (built-in Python module) - fallback only
 - **multiprocessing**: Process management for device simulation
 - **logging**: Application logging and debugging
 
 ### Frontend Dependencies
-- **Bootstrap 5**: CSS framework loaded from CDN
-- **Font Awesome**: Icon library loaded from CDN
-- **Custom JavaScript**: Dashboard functionality and auto-refresh
+- **Bootstrap 5**: CSS framework with Replit dark theme (`bootstrap-agent-dark-theme.min.css`)
+- **Font Awesome 6**: Icon library loaded from CDN
+- **Custom JavaScript**: Dashboard functionality with real-time auto-refresh and device status monitoring
 
 ### Environment Configuration
+- **DATABASE_URL**: PostgreSQL connection string (primary database)
+- **PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE**: PostgreSQL connection parameters
 - **SESSION_SECRET**: Flask session security (defaults to dev key)
-- **Database Path**: Configurable SQLite database location
-- **Debug Mode**: Flask development mode enabled
+- **Debug Mode**: Gunicorn production server with reload support for development
 
 ## Deployment Strategy
 
@@ -133,8 +140,16 @@ Preferred communication style: Simple, everyday language.
 - **Testing Confirmed**: Multiple devices (test002, test003) running simultaneously with separate MQTT connections
 
 ### Database Migration to PostgreSQL
-- **Primary Database**: PostgreSQL with proper schema and indexing
+- **Date**: July 2025
+- **Primary Database**: PostgreSQL with proper schema and indexing using SQLAlchemy ORM
 - **Fallback Support**: SQLite database maintained for environments without PostgreSQL
-- **ORM Integration**: SQLAlchemy models for PostgreSQL with proper relationships
+- **ORM Integration**: Separate model files for PostgreSQL (`models_postgres.py`) and SQLite (`models.py`)
+- **Production Ready**: Database connection pooling and proper environment variable configuration
+
+### Production Server Implementation
+- **Date**: July 2025
+- **Server**: Migrated from Flask dev server to Gunicorn production server
+- **Configuration**: Gunicorn with `--bind 0.0.0.0:5000 --reuse-port --reload` for development
+- **Performance**: Better handling of concurrent requests and device processes
 
 The system is designed for production IoT device simulation and management, providing realistic device behavior without requiring actual hardware. The architecture supports easy extension for additional device types and measurement parameters while maintaining proper device isolation and Cumulocity integration standards.
