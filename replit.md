@@ -60,9 +60,9 @@ Preferred communication style: Simple, everyday language.
 - **Independent Script Architecture**: Each device behaves like a standalone script with only devicename and clientID differences
 
 ### Device Types Supported
-- **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (1000-3000W)
-- **Heat Pump**: Generates voltage (220-240V), current (8-20A), power (2000-5000W)
-- **Main Grid**: Generates voltage (230-240V), current (10-50A), power (2500-12000W)
+- **PV (Solar Panels)**: Generates voltage (200-250V), current (5-15A), power (calculated: V×I, typically 1000-3750W)
+- **Heat Pump**: Generates voltage (220-240V), current (8-20A), power (calculated: V×I, typically 1760-4800W)
+- **Main Grid**: Generates voltage (230-240V), current (10-50A), power (calculated: V×I, typically 2300-12000W)
 
 ### Web Interface
 - **Dashboard**: Device overview, statistics, and management controls
