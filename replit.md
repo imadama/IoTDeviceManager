@@ -152,4 +152,16 @@ Preferred communication style: Simple, everyday language.
 - **Configuration**: Gunicorn with `--bind 0.0.0.0:5000 --reuse-port --reload` for development
 - **Performance**: Better handling of concurrent requests and device processes
 
-The system is designed for production IoT device simulation and management, providing realistic device behavior without requiring actual hardware. The architecture supports easy extension for additional device types and measurement parameters while maintaining proper device isolation and Cumulocity integration standards.
+### MQTT Reconnection Logic Implementation
+- **Date**: July 31, 2025
+- **Enhancement**: Added comprehensive MQTT broker reconnection logic for reliable IoT device connectivity
+- **Features Implemented**:
+  - **Automatic Reconnection**: Background thread with exponential backoff (5s to 5min delays)
+  - **Connection Monitoring**: Heartbeat mechanism every 60 seconds to detect connection issues
+  - **Resilient Recovery**: Up to 50 reconnection attempts (~4 hours) before giving up
+  - **Smart Reconnection**: Triggers on unexpected disconnections, preserves manual disconnects
+  - **Connection Health API**: Detailed status monitoring with timestamps and attempt counters
+- **Raspberry Pi Compatibility**: Specifically addresses connectivity issues on resource-constrained devices
+- **Production Ready**: Thread-safe implementation with proper cleanup and error handling
+
+The system is designed for production IoT device simulation and management, providing realistic device behavior without requiring actual hardware. The architecture supports easy extension for additional device types and measurement parameters while maintaining proper device isolation and Cumulocity integration standards. The robust reconnection logic ensures reliable operation in production environments with unstable network conditions.

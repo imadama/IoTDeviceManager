@@ -51,6 +51,19 @@ class CumulocityMqttClient:
         self.last_message_time = None
         self.logger = logging.getLogger(f'MQTT-{device_id}')
         
+        # Reconnection parameters
+        self.reconnect_delay = 5  # Start with 5 seconds
+        self.max_reconnect_delay = 300  # Max 5 minutes
+        self.reconnect_attempts = 0
+        self.max_reconnect_attempts = 50  # Try for about 4 hours max
+        self.auto_reconnect = True
+        self._reconnect_thread = None
+        
+        # Connection monitoring
+        self.last_heartbeat = None
+        self.heartbeat_interval = 60  # Send heartbeat every 60 seconds
+        self._heartbeat_thread = None
+        
         # Cumulocity MQTT topics
         self.measurement_topic = "s/us"  # Static template for measurements
         self.inventory_topic = f"s/ud/{device_id}"  # Device registration
@@ -127,6 +140,9 @@ class CumulocityMqttClient:
     
     def disconnect(self):
         """Disconnect from MQTT broker"""
+        # Disable auto-reconnect for manual disconnection
+        self.auto_reconnect = False
+        
         if self.client:
             self.client.loop_stop()
             self.client.disconnect()
@@ -286,8 +302,15 @@ class CumulocityMqttClient:
         """
         try:
             if not self.connected:
-                self.logger.warning("Not connected to MQTT broker")
-                return False
+                self.logger.warning("Not connected to MQTT broker - attempting reconnection")
+                # Try to reconnect if auto-reconnect is enabled
+                if self.auto_reconnect and self.reconnect_attempts < self.max_reconnect_attempts:
+                    if self._attempt_reconnection():
+                        self.logger.info("Successfully reconnected for measurement sending")
+                    else:
+                        return False
+                else:
+                    return False
             
             timestamp = measurement_data.get('timestamp', datetime.now().isoformat())
             device_id = measurement_data.get('device_id', self.device_id)
@@ -386,7 +409,12 @@ class CumulocityMqttClient:
         """Callback for MQTT connection"""
         if rc == 0:
             self.connected = True
+            self.reconnect_attempts = 0  # Reset on successful connection
+            self.last_heartbeat = datetime.now()
             self.logger.info(f"✓ Device '{self.device_id}' connected to Cumulocity MQTT broker ({self.broker_host})")
+            
+            # Start heartbeat monitoring
+            self._start_heartbeat()
         else:
             self.connected = False
             error_messages = {
@@ -404,6 +432,10 @@ class CumulocityMqttClient:
         self.connected = False
         if rc != 0:
             self.logger.warning(f"Unexpected disconnection from MQTT broker: {rc}")
+            # Start automatic reconnection if enabled
+            if self.auto_reconnect and self.reconnect_attempts < self.max_reconnect_attempts:
+                self.logger.info("Starting automatic reconnection...")
+                self._start_reconnect()
         else:
             self.logger.info("Cleanly disconnected from MQTT broker")
     
@@ -446,6 +478,132 @@ class CumulocityMqttClient:
     def _on_log(self, client, userdata, level, buf):
         """Callback for MQTT logging"""
         self.logger.debug(f"MQTT Log: {buf}")
+    
+    def _start_reconnect(self):
+        """Start the reconnection process in a background thread"""
+        import threading
+        if self._reconnect_thread is None or not self._reconnect_thread.is_alive():
+            self._reconnect_thread = threading.Thread(target=self._reconnect_loop, daemon=True)
+            self._reconnect_thread.start()
+    
+    def _reconnect_loop(self):
+        """Background reconnection loop with exponential backoff"""
+        while (not self.connected and 
+               self.auto_reconnect and 
+               self.reconnect_attempts < self.max_reconnect_attempts):
+            
+            self.reconnect_attempts += 1
+            
+            # Calculate delay with exponential backoff
+            delay = min(self.reconnect_delay * (2 ** (self.reconnect_attempts - 1)), 
+                       self.max_reconnect_delay)
+            
+            self.logger.info(f"Reconnection attempt {self.reconnect_attempts}/{self.max_reconnect_attempts} "
+                           f"in {delay} seconds...")
+            
+            time.sleep(delay)
+            
+            try:
+                # Attempt to reconnect
+                if self._attempt_reconnection():
+                    self.logger.info("✓ Successfully reconnected to MQTT broker")
+                    self.reconnect_attempts = 0  # Reset counter on success
+                    self.reconnect_delay = 5  # Reset delay
+                    break
+                else:
+                    self.logger.warning(f"Reconnection attempt {self.reconnect_attempts} failed")
+                    
+            except Exception as e:
+                self.logger.error(f"Error during reconnection attempt {self.reconnect_attempts}: {e}")
+        
+        if self.reconnect_attempts >= self.max_reconnect_attempts:
+            self.logger.error("Maximum reconnection attempts reached. Giving up.")
+            self.auto_reconnect = False
+    
+    def _attempt_reconnection(self) -> bool:
+        """Attempt to reconnect to the MQTT broker"""
+        try:
+            # Clean up old client
+            if self.client:
+                try:
+                    self.client.loop_stop()
+                    self.client.disconnect()
+                except:
+                    pass  # Ignore errors during cleanup
+            
+            # Create new client and connect
+            return self.connect()
+            
+        except Exception as e:
+            self.logger.error(f"Error in reconnection attempt: {e}")
+            return False
+    
+    def enable_auto_reconnect(self, enable: bool = True):
+        """Enable or disable automatic reconnection"""
+        self.auto_reconnect = enable
+        if enable:
+            self.logger.info("Auto-reconnection enabled")
+        else:
+            self.logger.info("Auto-reconnection disabled")
+    
+    def reset_reconnect_counter(self):
+        """Reset the reconnection attempt counter"""
+        self.reconnect_attempts = 0
+        self.logger.info("Reconnection counter reset")
+    
+    def _start_heartbeat(self):
+        """Start heartbeat monitoring in background thread"""
+        import threading
+        if self._heartbeat_thread is None or not self._heartbeat_thread.is_alive():
+            self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+            self._heartbeat_thread.start()
+    
+    def _heartbeat_loop(self):
+        """Send periodic heartbeat to monitor connection health"""
+        while self.connected and self.auto_reconnect:
+            try:
+                time.sleep(self.heartbeat_interval)
+                
+                if self.connected:
+                    # Send a simple ping/heartbeat
+                    current_time = datetime.now()
+                    
+                    # Check if we haven't sent anything recently
+                    if (self.last_message_time is None or 
+                        (current_time - self.last_message_time).total_seconds() > self.heartbeat_interval):
+                        
+                        # Send a simple operation to test connection
+                        test_result = self.client.publish("s/us", "400,Connection heartbeat", qos=0)
+                        
+                        if test_result.rc == mqtt.MQTT_ERR_SUCCESS:
+                            self.last_heartbeat = current_time
+                            self.logger.debug(f"Heartbeat sent successfully")
+                        else:
+                            self.logger.warning(f"Heartbeat failed: {test_result.rc}")
+                            # Connection might be broken, let disconnect callback handle it
+                            
+            except Exception as e:
+                self.logger.error(f"Error in heartbeat loop: {e}")
+                break
+        
+        self.logger.debug("Heartbeat monitoring stopped")
+    
+    def get_connection_health(self) -> dict:
+        """Get detailed connection health information"""
+        now = datetime.now()
+        return {
+            'connected': self.connected,
+            'registered': self.registered,
+            'auto_reconnect': self.auto_reconnect,
+            'reconnect_attempts': self.reconnect_attempts,
+            'max_reconnect_attempts': self.max_reconnect_attempts,
+            'last_message_time': self.last_message_time.isoformat() if self.last_message_time else None,
+            'last_heartbeat': self.last_heartbeat.isoformat() if self.last_heartbeat else None,
+            'seconds_since_last_message': (now - self.last_message_time).total_seconds() if self.last_message_time else None,
+            'seconds_since_last_heartbeat': (now - self.last_heartbeat).total_seconds() if self.last_heartbeat else None,
+            'broker_host': self.broker_host,
+            'device_id': self.device_id
+        }
 
 class MqttSettings:
     """Manages MQTT connection settings"""
